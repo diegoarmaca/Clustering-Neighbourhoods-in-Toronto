@@ -34,7 +34,6 @@ neighbourhood_raw <- list_package_resources("6e19a90f-971c-46b3-852c-0c48c436d1f
 
 main_df_raw <- neighbourhood_raw
 main_df_raw <- as.data.frame(main_df_raw)
-neighbourhood_raw
 # Remove "X2011 prefix from all column names"
 ```
 ```{r}
@@ -67,69 +66,66 @@ col_names_2011 <- as.data.frame(colnames(main_df_raw))
 col_names_2011 <- col_names_2011[7:nrow(col_names_2011),]
 col_names_2011 <- as.data.frame(col_names_2011)
 colnames(col_names_2011) <- "neighbourhoods"
-col_names_2011
 
 #Filter education per neighbourhood
-education_df <- filter(main_df_raw, 
+main_df <- filter(main_df_raw, 
                       Category == "Neighbourhood Information" | 
                       Category == "Income" | 
                       Characteristic == "Population, 2016" | 
                       Characteristic == "Total visible minority population" | 
                       Characteristic == "Not a visible minority" | 
+                      Characteristic == "Unemployment rate" | 
+                      Characteristic == "Rate of unsuitable housing"|
                       Topic == "Age characteristics" | 
                       Topic == "Visible minority population" | 
                       Topic == "Immigrant status and period of immigration" |
-                      Topic =="Highest certificate, diploma or degree")
+                      Topic == "Highest certificate, diploma or degree" |
+                      Topic == "Low income in 2015")
 
 ```
 
-```{r echo= FALSE}
+```{r echo= FALSE include = FALSE}
 # Reshape the dataframe (swap row and columns)
-education_df_reshaped <- data.frame(t(education_df[-1]))
-colnames(education_df_reshaped) <- education_df[, 1]
+main_df_reshaped <- data.frame(t(main_df[-1]))
+colnames(main_df_reshaped) <- main_df[, 1]
 # Slice the reshaped dataframe
-education_df_sliced <- education_df_reshaped %>%
-  dplyr::slice(4:nrow(education_df_reshaped))
+main_df_sliced <- main_df_reshaped %>%
+  dplyr::slice(4:nrow(main_df_reshaped))
 # Turn characteristics to column names
-names(education_df_sliced) <- as.matrix(education_df_sliced[1, ])
-education_df_sliced <- education_df_sliced[-1, ]
-education_df_sliced[] <- lapply(education_df_sliced, function(x) type.convert(as.character(x)))
+names(main_df_sliced) <- as.matrix(main_df_sliced[1, ])
+main_df_sliced <- main_df_sliced[-1, ]
+main_df_sliced[] <- lapply(main_df_sliced, function(x) type.convert(as.character(x)))
 
 # Clean column names
 library(janitor)
-education_df_sliced <- education_df_sliced %>% clean_names()
-education_df_sliced$total_population_aged_15_years_and_over_by_major_field_of_study_classification_of_instructional_programs_cip_2011
+main_df_sliced <- main_df_sliced %>% clean_names()
+main_df_sliced$total_population_aged_15_years_and_over_by_major_field_of_study_classification_of_instructional_programs_cip_2011
+main_df_sliced$x18_to_64_years_percent
 
-education_df_sliced = education_df_sliced[-1,]
-education_df_sliced <- mutate(education_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
-education_df_sliced$neighbourhoods
+main_df_sliced = main_df_sliced[-1,]
+main_df_sliced <- mutate(main_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
 
 # Assign 0 as Toronto neighbourhood number
-education_df_sliced$neighbourhood_number <- as.numeric(as.character(education_df_sliced$neighbourhood_number)) 
-education_df_sliced$neighbourhood_number[is.na(education_df_sliced$neighbourhood_number)] <- 0 
-education_df_sliced$neighbourhood_number <- as.factor(education_df_sliced$neighbourhood_number)
-education_df_sliced$neighbourhoods
+main_df_sliced$neighbourhood_number <- as.numeric(as.character(main_df_sliced$neighbourhood_number)) 
+main_df_sliced$neighbourhood_number[is.na(main_df_sliced$neighbourhood_number)] <- 0 
+main_df_sliced$neighbourhood_number <- as.factor(main_df_sliced$neighbourhood_number)
 ```
 ```{r}
-# Rename and columns
-education_df_sliced$total_visible_minority_population
-education_df_sliced <- education_df_sliced %>%
-  rename(total_population_education = total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data)
-education_df_sliced <- education_df_sliced %>%
-  rename(total_population_income = total_employment_income_groups_in_2015_for_the_population_aged_15_years_and_over_in_private_households_100_percent_data)
 # Select wanted columns to make a new dataframe
-df_cleaned <- education_df_sliced %>%
+df_cleaned <- main_df_sliced %>%
   select(
     "neighbourhood_number",
     "neighbourhoods",
     "population_2016",
-    "total_population_education",
-    "total_population_income",
+    "total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data",
+    "total_employment_income_groups_in_2015_for_the_population_aged_15_years_and_over_in_private_households_100_percent_data",
     
+    # education
     "no_certificate_diploma_or_degree_2",
     "secondary_high_school_diploma_or_equivalency_certificate_2",
     "postsecondary_certificate_diploma_or_degree_2",
     
+    # Age
     "children_0_14_years",
     "youth_15_24_years",
     "working_age_25_54_years",
@@ -137,21 +133,26 @@ df_cleaned <- education_df_sliced %>%
     "seniors_65_years",
     "older_seniors_85_years",
     
-    "x90_000_to_99_999_3",
+    # low income percentage
+    "x18_to_64_years_percent",
     
+    #unemployement rate
+    "unemployment_rate",
+    
+    #immigrant
     "non_immigrants",
     "immigrants",
+    
+    # visible minority
     "total_visible_minority_population",
+    
+    # housing
+    "rate_of_unsuitable_housing"
   )
 
 # transform df to numeric
-#df_cleaned <-as.numeric(gsub(",", "", df_cleaned, fixed = TRUE))
-
-#df_cleaned[,3:length(df_cleaned)] <- 
-  #sapply(df_cleaned, function(x) as.numeric(x, gsub(",", "", df_cleaned, fixed = TRUE)))
-
 df_cleaned$population_2016 = as.numeric(gsub(",", "", df_cleaned$population_2016))
-df_cleaned$total_population_income = as.numeric(gsub(",", "", df_cleaned$total_population_income))
+df_cleaned$total_employment_income_groups_in_2015_for_the_population_aged_15_years_and_over_in_private_households_100_percent_data = as.numeric(gsub(",", "", df_cleaned$total_employment_income_groups_in_2015_for_the_population_aged_15_years_and_over_in_private_households_100_percent_data))
 df_cleaned$children_0_14_years = as.numeric(gsub(",", "", df_cleaned$children_0_14_years))
 df_cleaned$youth_15_24_years = as.numeric(gsub(",", "", df_cleaned$youth_15_24_years))
 df_cleaned$working_age_25_54_years = as.numeric(gsub(",", "", df_cleaned$working_age_25_54_years))
@@ -163,23 +164,26 @@ df_cleaned$seniors_65_years = as.numeric(gsub(",", "", df_cleaned$seniors_65_yea
 df_cleaned$older_seniors_85_years = as.numeric(gsub(",", "", df_cleaned$older_seniors_85_years))
 df_cleaned$non_immigrants = as.numeric(gsub(",", "", df_cleaned$non_immigrants))
 df_cleaned$immigrants = as.numeric(gsub(",", "", df_cleaned$immigrants))
-df_cleaned$x90_000_to_99_999_3 = as.numeric(gsub(",", "", df_cleaned$x90_000_to_99_999_3))
 df_cleaned$total_visible_minority_population = as.numeric(gsub(",", "", df_cleaned$total_visible_minority_population))
 
 df_cleaned
 ```
 
 ``` {r}
+## Turn absolute values to percentage
+total_population_education <- df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
+# total_population_income <- df_cleaned$total_employment_income_groups_in_2015_for_the_population_aged_15_years_and_over_in_private_households_100_percent_data
+
 # education data transformation
 df_cleaned <- 
   mutate(df_cleaned, no_certificate_diploma_or_degree_2 =
-           (df_cleaned$no_certificate_diploma_or_degree_2/df_cleaned$total_population_education)*100)
+           (df_cleaned$no_certificate_diploma_or_degree_2/total_population_education)*100)
 df_cleaned <- 
   mutate(df_cleaned, secondary_high_school_diploma_or_equivalency_certificate_2 =
-           (df_cleaned$secondary_high_school_diploma_or_equivalency_certificate_2/df_cleaned$total_population_education)*100)
+           (df_cleaned$secondary_high_school_diploma_or_equivalency_certificate_2/total_population_education)*100)
 df_cleaned <- 
   mutate(df_cleaned, postsecondary_certificate_diploma_or_degree_2 =
-           (df_cleaned$postsecondary_certificate_diploma_or_degree_2/df_cleaned$total_population_education)*100)
+           (df_cleaned$postsecondary_certificate_diploma_or_degree_2/total_population_education)*100)
 
 # age data transformation
 df_cleaned <- 
@@ -214,30 +218,27 @@ df_cleaned <-
   mutate(df_cleaned, total_visible_minority_population =
            (df_cleaned$total_visible_minority_population/df_cleaned$population_2016)*100)
 
-# income data transformation
-df_cleaned <- 
-  mutate(df_cleaned, x90_000_to_99_999_3 =
-           (df_cleaned$x90_000_to_99_999_3/df_cleaned$population_2016)*100)
-
 df_cleaned
 ```
 
 ```{r}
-# Normalize 
-df_normalized = df_cleaned[,c(
+# Normalize data by subtracting the mean and dividing it by the standard deviation.
+df_selected_columns = df_cleaned[,c(
   "no_certificate_diploma_or_degree_2",
-  "postsecondary_certificate_diploma_or_degree_2",
-  "x90_000_to_99_999_3",
-  "non_immigrants",
-  "total_visible_minority_population"
+  "unemployment_rate",
+  "x18_to_64_years_percent",
+  "immigrants",
+  "total_visible_minority_population",
+  "rate_of_unsuitable_housing"
   )]
-means = apply(df_normalized,2,mean)
-sds = apply(df_normalized,2,sd)
-nor = scale(df_normalized,means,sds)
+means = apply(df_selected_columns,2,mean)
+sds = apply(df_selected_columns,2,sd)
+nor = scale(df_selected_columns,means,sds)
 nor
 ```
 
 ```{r}
+# Get the distance ot the normalized data
 distance = dist(nor)
 print(distance, digits=3)
 plot_data <- nor
@@ -246,11 +247,13 @@ plot_data <- nor
 plot_data_comp = hclust(distance)
 plot(plot_data_comp,labels=plot_data_comp$ID,main='Default from hclust', cex=.4)
 plot(plot_data_comp,hang=-1, cex=.4)
-
+rect.hclust(plot_data_comp, k = 4, border = "red")
 # Hierarchical agglomerative clustering using "average" linkage 
 plot_data_mean<-hclust(distance,method="average")
-plot(plot_data_mean,hang=-1)
-# Try to see what's making the break
+plot(plot_data_mean,hang=-1, cex=.4)
+
+
+# Todo: Try to see what's making the break
 ```
 ```{r}
 # Cluster membership
@@ -268,10 +271,17 @@ plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of 
 
 ```
 ```{r}
+#get hclust label to neighbourhoods
+hcluster <- cutree(plot_data_comp, k=4)
+hcluster
+df_w_vector <- mutate(df_cleaned, hcluster = hcluster)
+```
+```{r}
 # K-means clustering
-kc<-kmeans(nor,5)
+kc<-kmeans(nor,4)
 kc
 
+#get kmeans label to neighbourhoods
 df_w_vector <- mutate(df_cleaned, cluster = kc$cluster)
 
 df_w_vector["neighbourhoods"] <- 
@@ -283,12 +293,10 @@ merged_df <- merge(df_w_vector, clean_geo_data, by = 'neighbourhoods')
 ```{r}
 merged_df$cluster <- as.factor(merged_df$cluster)
 sf_merged_df <- st_sf(merged_df, sf_column_name = "geometry")
-
 #Plot all majors without palette
 tmap_mode("plot")
 tm_shape(sf_merged_df) +
 tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
-  
   tm_polygons(c("cluster"), style = "pretty") +
   tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
   tm_facets(sync = TRUE, ncol = 1)
@@ -298,10 +306,16 @@ cluster1
 
 
 ```{r}
-df_cleaned_2 <- df_cleaned[,c(6:8,14:16)]
-plot(df_cleaned_2, col = kc$cluster)
-legend("bottomright", legend = paste("Group", 1:5), col = 1:5, pch = 9, bty = "n")
-head(df_cleaned_2)
+colors <- c("#00AFBB", "#E7B800", "#FC4E07", "#000000")
+colors <- colors[kc$cluster]
+
+kc$cluster
+plot(df_selected_columns, col = colors)
+par(xpd=TRUE)
+legend(legend = unique(kc$cluster), col =unique(colors), pch = 19, bty = "o", "bottomright",cex = .8)
+head(df_selected_columns)
+
+
 # how to label the clusters
 # label the data entries(cluster number)
 # going back from distrance to real values
