@@ -226,7 +226,7 @@ df_cleaned
 df_selected_columns = df_cleaned[,c(
   "no_certificate_diploma_or_degree_2",
   "unemployment_rate",
-  "x18_to_64_years_percent",
+  "x18_to_64_years_percent", # low income
   "immigrants",
   "total_visible_minority_population",
   "rate_of_unsuitable_housing"
@@ -251,9 +251,6 @@ rect.hclust(plot_data_comp, k = 4, border = "red")
 # Hierarchical agglomerative clustering using "average" linkage 
 plot_data_mean<-hclust(distance,method="average")
 plot(plot_data_mean,hang=-1, cex=.4)
-
-
-# Todo: Try to see what's making the break
 ```
 ```{r}
 # Cluster membership
@@ -261,20 +258,23 @@ member_comp = cutree(plot_data_comp,4)
 member_mean = cutree(plot_data_mean,4)
 table(member_comp,member_mean)
 
-#Characterizing clusters 
+# Characterizing clusters 
 aggregate(nor,list(member_mean),mean)
 
 # Scree Plot
 wss <- (nrow(nor)-1)*sum(apply(nor,2,var))
 for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
-plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares") 
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+
+# 
 
 ```
 ```{r}
 #get hclust label to neighbourhoods
 hcluster <- cutree(plot_data_comp, k=4)
-hcluster
-df_w_vector <- mutate(df_cleaned, hcluster = hcluster)
+hcluster <- as.data.frame(hcluster)
+hcluster$hcluster
+df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
 ```
 ```{r}
 # K-means clustering
@@ -282,7 +282,7 @@ kc<-kmeans(nor,4)
 kc
 
 #get kmeans label to neighbourhoods
-df_w_vector <- mutate(df_cleaned, cluster = kc$cluster)
+df_w_vector <- mutate(df_w_vector, cluster = kc$cluster)
 
 df_w_vector["neighbourhoods"] <- 
   janitor::make_clean_names(as.matrix(df_w_vector["neighbourhoods"]))
@@ -292,7 +292,18 @@ merged_df <- merge(df_w_vector, clean_geo_data, by = 'neighbourhoods')
 
 ```{r}
 merged_df$cluster <- as.factor(merged_df$cluster)
+merged_df$hcluster <- as.factor(merged_df$hcluster)
 sf_merged_df <- st_sf(merged_df, sf_column_name = "geometry")
+
+
+#Plot all majors without palette
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("hcluster"), style = "pretty") +
+  tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
+
 #Plot all majors without palette
 tmap_mode("plot")
 tm_shape(sf_merged_df) +
@@ -300,6 +311,7 @@ tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size
   tm_polygons(c("cluster"), style = "pretty") +
   tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
   tm_facets(sync = TRUE, ncol = 1)
+
 cluster1 <- filter(merged_df, cluster == 1)
 cluster1
 ```
