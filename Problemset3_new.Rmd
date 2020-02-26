@@ -282,7 +282,7 @@ plot(1:20, income_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "With
 
 ```{r}
 ### K-means clustering by age ###
-age_kmeans_clust <- kmeans(norm_age_df_2016,2)
+age_kmeans_clust <- kmeans(norm_age_df_2016,4)
 age_kmeans_clust
 
 ```
@@ -294,8 +294,37 @@ income_kmeans_clust
 
 ```
 
+```{r}
+### Cleaning geo-location dataset
+clean_geo_data <- janitor::clean_names(geo_data)
+clean_geo_data <- extract(clean_geo_data, area_name, into = "neighbourhoods" , regex = "([^(0-9)]+)")
+clean_geo_data["neighbourhoods"] <- 
+  janitor::make_clean_names(as.matrix(clean_geo_data["neighbourhoods"]))
+clean_geo_data <- janitor::clean_names(clean_geo_data)
+clean_geo_data <- select(clean_geo_data, neighbourhoods, longitude, latitude, geometry)
+filter(clean_geo_data, neighbourhoods %in% c("mimico","weston_pellam_park"))
+clean_geo_data["neighbourhoods"][c(17,67),] <- c("mimico_includes_humber_bay_shores","weston_pelham_park")
+clean_geo_data
+```
+```
+
+```{r}
+### Merge age hierarchical cluster and Kmeans classification with the dataset ###
+
+#Merge Kmeans
+df_kmeans_age <- mutate(scaled_age_df_2016, kmeans = age_kmeans_clust$cluster)
+
+merge_age_clust <- merge(df_kmeans_age, clean_geo_data, by = 'neighbourhoods')
+
+#Merge Hclustering
+hcluster <- cutree(plot_data_comp, k=4)
+hcluster <- as.data.frame(hcluster)
+hcluster$hcluster
+df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
 
 
+
+```
 
 
 
