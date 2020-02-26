@@ -75,6 +75,7 @@ main_df <- filter(main_df_raw,
                       Characteristic == "Total visible minority population" | 
                       Characteristic == "Not a visible minority" | 
                       Characteristic == "Unemployment rate" | 
+                      Characteristic == "Employment rate" | 
                       Characteristic == "Rate of unsuitable housing"|
                       Topic == "Age characteristics" | 
                       Topic == "Visible minority population" | 
@@ -136,7 +137,8 @@ df_cleaned <- main_df_sliced %>%
     # low income percentage
     "x18_to_64_years_percent",
     
-    #unemployement rate
+    #employement rate
+    "employment_rate",
     "unemployment_rate",
     
     #immigrant
@@ -224,12 +226,33 @@ df_cleaned
 ```{r}
 # Normalize data by subtracting the mean and dividing it by the standard deviation.
 df_selected_columns = df_cleaned[,c(
+  #Education
   "no_certificate_diploma_or_degree_2",
+  "secondary_high_school_diploma_or_equivalency_certificate_2",
+  "postsecondary_certificate_diploma_or_degree_2",
+  
+  #Employment rate
   "unemployment_rate",
+  
+  #low income
   "x18_to_64_years_percent", # low income
+  
+  #Immigrant
   "immigrants",
+  
+  #visible minority
   "total_visible_minority_population",
-  "rate_of_unsuitable_housing"
+  
+  #houseing
+  "rate_of_unsuitable_housing",
+  
+  #age
+   "children_0_14_years",
+    "youth_15_24_years",
+    "working_age_25_54_years",
+    "pre_retirement_55_64_years",
+    "seniors_65_years",
+    "older_seniors_85_years"
   )]
 means = apply(df_selected_columns,2,mean)
 sds = apply(df_selected_columns,2,sd)
@@ -295,7 +318,6 @@ merged_df$cluster <- as.factor(merged_df$cluster)
 merged_df$hcluster <- as.factor(merged_df$hcluster)
 sf_merged_df <- st_sf(merged_df, sf_column_name = "geometry")
 
-
 #Plot all majors without palette
 tmap_mode("plot")
 tm_shape(sf_merged_df) +
@@ -324,9 +346,8 @@ colors <- colors[kc$cluster]
 kc$cluster
 plot(df_selected_columns, col = colors)
 par(xpd=TRUE)
-legend(legend = unique(kc$cluster), col =unique(colors), pch = 19, bty = "o", "bottomright",cex = .8)
+legend(legend = unique(kc$cluster), col =unique(colors), pch = 19, bty = "o", "bottomright", cex = .8)
 head(df_selected_columns)
-
 
 # how to label the clusters
 # label the data entries(cluster number)
