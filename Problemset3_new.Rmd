@@ -23,6 +23,7 @@ library(sf)
 library(tmap)
 library(tmaptools)
 library(leaflet)
+library(cluster)
 ```
 
 # Introduction
@@ -74,8 +75,8 @@ age_df_2016 <- filter(clean_header_df_2016, category == "Population" &
 #Remove rows 1 to 6. It contains general information not related with the subject under analysis
 age_df_2016 <- age_df_2016[7:nrow(age_df_2016),]
 
-#Remove first 4 columns 
-age_df_2016 <- age_df_2016[,-c(1:4)]
+#Remove first 4 columns and column "city_of_toronto" 
+age_df_2016 <- age_df_2016[,-c(1:4,6)]
 
 
 #Select only the characters after the word "to" or those finishing in "over"
@@ -88,9 +89,6 @@ age_df_2016 <- extract(age_df_2016, age_range, into = "age_range" , regex = "([0
 age_df_2016 <- extract(age_df_2016, characteristic, into = "biosex" , regex = "(^[A-z]+[^:])", remove = TRUE) #The remove = False keeps the older column
 
 
-
-#Remove the comma from city_of_toronto
-age_df_2016$city_of_toronto <- gsub(",", "", age_df_2016$city_of_toronto)
 
 #Change class of columns containing numbers as.numeric 
 age_df_2016[,3:length(age_df_2016)] <- 
@@ -113,8 +111,35 @@ scaled_age_df_2016 <-
 scaled_age_df_2016 <- as.data.frame(scaled_age_df_2016)
 
 
-#Reshape all neighbourhood columns into one column called variable and the values
+#age_df_2016_reshaped <- transpose(scaled_age_df_2016, make.names=1, keep.names="neighbourhoods")
+
+##Reshape all neighbourhood columns into one column called variable and the values
 scaled_age_df_2016 <- melt(scaled_age_df_2016, measure = 3:length(scaled_age_df_2016))
+
+
+### Male by age
+age_male_2016 <- filter(scaled_age_df_2016, biosex == "Male")
+
+age_male_2016 <- reshape(age_male_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
+
+#colnames(scaled_age_df_2016) <- c("neighbourhoods", "age_range", "male", "female") 
+
+
+### Female by age
+age_female_2016 <- filter(scaled_age_df_2016, biosex == "Female")
+
+age_female_2016 <- reshape(age_female_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
+
+scaled_age_df_2016 <- merge(age_male_2016, age_female_2016, by="variable")
+
+colnames(scaled_age_df_2016) <- gsub("variable", "neighbourhoods", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("\\.", "_", colnames(scaled_age_df_2016))
+
+colnames(scaled_age_df_2016) <- gsub("value_", "", colnames(scaled_age_df_2016))
+
+colnames(scaled_age_df_2016) <- gsub("x", "male", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("y", "female", colnames(scaled_age_df_2016))
+
 
 head(scaled_age_df_2016)
 ```
@@ -133,15 +158,20 @@ clean_income_df_2016 <- janitor::clean_names(clean_income_df_2016)
 income_df_2016 <- filter(clean_income_df_2016, category == "Income" & 
                               topic == "Income of households in 2015")
 
-#Remove columns 1 to 4
-income_df_2016 <- income_df_2016[,-c(1:4)]
+#Remove columns 1 to 4 and column "city_of_toronto" 
+income_df_2016 <- income_df_2016[,-c(1:4,6)]
 
 #Remove rows not related to total income by intervals
 income_df_2016 <- income_df_2016[-c(2:6,8:13,15:20,22:23,38,40:59),]
 
-#Extract biosex in a separate column
+#Extract Income in a separate column
 income_df_2016 <- extract(income_df_2016, characteristic, into = "income_range" , 
-                       regex = "([,0-9]+$)", remove = TRUE) #The remove = False keeps the older column
+                       regex = "([0-9,]+$|[0-9, and over]+$)", remove = TRUE) #The remove = False keeps the older column
+
+
+#Extract Income in a separate column
+income_df_2016 <- extract(income_df_2016, income_range, into = "income_range" , 
+                       regex = "([,0-9]+)", remove = TRUE) #The remove = False keeps the older column
 
 
 
@@ -172,13 +202,100 @@ scaled_income_df_2016 <-
 #Transform the result to dataframe
 scaled_income_df_2016 <- as.data.frame(scaled_income_df_2016)
 
-
-#Reshape all neighbourhood columns into one column called variable and the values
-scaled_income_df_2016 <- reshape2::melt(scaled_income_df_2016, measure = 2:length(scaled_income_df_2016))
+inco_df_2016_reshaped <- transpose(scaled_income_df_2016, make.names=1, keep.names="neighbourhoods")
 
 
-head(scaled_income_df_2016)
+
+##Reshape all neighbourhood columns into one column called variable and the values
+#scaled_income_df_2016 <- reshape2::melt(scaled_income_df_2016, measure = #2:length(scaled_income_df_2016))
+
+
+head(inco_df_2016_reshaped)
 ```
+
+```{r}
+#### Hierarchical Clustering by Age ###
+
+#Normalization
+age_all_num <- scaled_age_df_2016[,-1]
+mean_age_df_2016 <- apply(age_all_num,2,mean) 
+sd_age_df_2016 <- apply(age_all_num,2,sd) 
+norm_age_df_2016 <- scale(age_all_num,mean_age_df_2016, sd_age_df_2016)
+
+#Calculate euclidean distance
+age_distance <- dist(norm_age_df_2016, method = "euclidean")
+
+#Cluster dendogram with Complete linkage
+age_hclust <- hclust(age_distance)
+plot(age_hclust, hang = -1)
+
+#Cluster membership
+age_membership <- cutree(age_hclust, k = 5)
+
+#Cluster means
+aggregate(age_all_num, list(age_membership), mean)
+aggregate(scaled_age_df_2016[,-1], list(age_membership), mean)
+
+#Silhouette Plot
+plot(silhouette(cutree(age_hclust, k = 5), age_distance))
+
+#Scree plot
+age_ww_sum_sqrs <- (nrow(age_all_num) -1)*sum(apply(age_all_num,2,mean))
+for (i in 2:20) age_ww_sum_sqrs[i] <- sum(kmeans(age_all_num, centers = i)$withinss)
+plot(1:20, age_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
+
+```
+
+```{r}
+#### Hierarchical Clustering by Income ###
+
+#Normalization
+income_all_num <- inco_df_2016_reshaped[,-1]
+mean_income_df_2016 <- apply(income_all_num,2,mean) 
+sd_income_df_2016 <- apply(income_all_num,2,sd) 
+norm_income_df_2016 <- scale(income_all_num,mean_income_df_2016, sd_income_df_2016)
+
+#Calculate euclidean distance
+income_distance <- dist(norm_income_df_2016, method = "euclidean")
+
+#Cluster dendogram with Complete linkincome
+income_hclust <- hclust(income_distance)
+plot(income_hclust, hang = -1)
+
+#Cluster membership
+income_membership <- cutree(income_hclust, k = 5)
+
+#Cluster means
+aggregate(income_all_num, list(income_membership), mean)
+aggregate(inco_df_2016_reshaped[,-1], list(income_membership), mean)
+
+#Silhouette Plot
+plot(silhouette(cutree(income_hclust, k = 5), income_distance))
+
+#Scree plot
+income_ww_sum_sqrs <- (nrow(income_all_num) -1)*sum(apply(income_all_num,2,mean))
+for (i in 2:20) income_ww_sum_sqrs[i] <- sum(kmeans(income_all_num, centers = i)$withinss)
+plot(1:20, income_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
+
+
+```
+
+```{r}
+### K-means clustering by age ###
+age_kmeans_clust <- kmeans(norm_age_df_2016,2)
+age_kmeans_clust
+
+```
+
+```{r}
+### K-means clustering by age ###
+income_kmeans_clust <- kmeans(norm_income_df_2016,3)
+income_kmeans_clust
+
+```
+
+
+
 
 
 
@@ -244,3 +361,7 @@ https://CRAN.R-project.org/package=tmaptools
 Joe Cheng, Bhaskar Karambelkar and Yihui Xie (2019). leaflet: Create Interactive Web
 Maps with the JavaScript 'Leaflet' Library. R package version 2.0.3.
 https://CRAN.R-project.org/package=leaflet
+
+Maechler, M., Rousseeuw, P., Struyf, A., Hubert, M., Hornik,
+K.(2019).  cluster: Cluster Analysis Basics and Extensions. R package
+version 2.1.0.
