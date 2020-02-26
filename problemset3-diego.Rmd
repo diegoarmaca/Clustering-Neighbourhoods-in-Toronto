@@ -1,0 +1,278 @@
+---
+title: "ProblemSet3"
+author: "Ke-li Chiu & Diego Mamanche Castellanos"
+date: "06/02/2020"
+output: pdf_document
+abstract: "Education is a contributor to many beneficial socio-economic outcomes. We intend to exam the the relationship between academic majors and household income in Toronto's neighbourhoods—can we find higher or lower percentage population in certain academic majors in higher or lower income neighbourhoods? The result shows that higher income neighbourhoods also have higher percentage of residents with majors in business, The data set is retrieved from the package *City of Toronto Neighbourhood Profiles* from the year 2016. ###### We intend to use the comparison to bring awareness of inequality in income and education existing in the City of Toronto."
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, include=FALSE, message=FALSE}
+#Set up the environment
+library(opendatatoronto)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+library(data.table) #Useful to transponse a dataframe
+library(sf)
+library(tmap)
+library(tmaptools)
+library(leaflet)
+library(cluster)
+```
+
+# Introduction
+Education is a contributor to many beneficial socio-economic outcomes. In this study, we intend to examine the relationship between household income and educational profile in terms of residents' academic majors in Toronto's 140 neighbourhoods. The majors are categorized as follows—
+"education", "visual and performing arts and communications technologies," "humanities," "social and behavioural sciences and law," "business_management_and_public_administration," "physical and life sciences and technologies," "mathematics computer and information sciences," "architecture engineering and related technologies," "agriculture natural resources and conservation," "personal protective and transportation services" and "no postsecondary certificate diploma or degree." The question we want to answer is if we can find a higher population percentage in specific academic majors in higher-income neighbourhoods or vice versa? The question is relevant because the academic major is a significant factor for people's occupations and their associated earning; thus, it is deemed as an essential tool for social mobility.
+
+```{r echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
+#Set working Directory
+#setwd("~/Experimental Design for Data Science/ProblemSet2")
+# Search packages (this returns a table)
+neighbourhood_packages <- search_packages("Neighbourhood")
+# Filter the neighbourhood demographic dataset
+neighbourhood_demographics_package<- neighbourhood_packages %>%
+  filter(title == "Neighbourhood Profiles")
+#Create main dataset for year 2016 
+main_df_2016 <-  neighbourhood_demographics_package %>% # Start with the package 
+  list_package_resources() %>% # List the resources in the package
+  filter(name == "neighbourhood-profiles-2016-csv") %>% # Only keep the resource we want 
+  get_resource()
+### GEO-LOCATION DATASET TORONTO BY NEIGHBOURHOODS ###
+# get package
+package <- show_package("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
+package
+# get all resources for this package
+resources <- list_package_resources("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
+# identify datastore resources; by default, Toronto Open Data sets datastore resource 
+#format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+# load the first datastore resource as a sample
+geo_data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+```
+
+
+# Dataset and Method Description
+City of Toronto Neighbourhood Profiles data set is sourced from several Census tables released by Statistics Canada every five years. The dataset uses this Census data to provide a portrait of the demographic, social and economic characteristics of the people and households in each City of Toronto neighbourhood. Each data point in this file is presented for the City's 140 neighbourhoods, as well as for the City of Toronto as a whole. The data set consists of 144 columns for neighbourhoods and 1537 rows for characteristics of the neighbourhoods. Data cleaning and reshaping are performed to have a new data frame that has 14 characteristics regarding topics of income as columns and education and the 140 neighbourhoods as rows.ing among academic fields.
+
+```{r echo=FALSE, include=TRUE, message=FALSE, warning=FALSE}
+##### Distribution by age 2016 ####
+#Select sheet 2016
+clean_header_df_2016 <- main_df_2016
+#Clean header using janitor
+clean_header_df_2016 <- janitor::clean_names(clean_header_df_2016)
+#Select only Population by Age characteristics from the main dataset 
+age_df_2016 <- filter(clean_header_df_2016, category == "Population" & 
+                              topic == "Age characteristics")
+#Remove rows 1 to 6. It contains general information not related with the subject under analysis
+age_df_2016 <- age_df_2016[7:nrow(age_df_2016),]
+#Remove first 4 columns and column "city_of_toronto" 
+age_df_2016 <- age_df_2016[,-c(1:4,6)]
+#Select only the characters after the word "to" or those finishing in "over"
+age_df_2016 <- extract(age_df_2016, characteristic, into = "age_range" , regex = "([to][ 0-9]+[ years]+$|[0-9 ]+[years and over]+$)", remove = FALSE)
+#Extract only the numbers 
+age_df_2016 <- extract(age_df_2016, age_range, into = "age_range" , regex = "([0-9]+)", remove = TRUE)
+#Extract biosex in a separate column
+age_df_2016 <- extract(age_df_2016, characteristic, into = "biosex" , regex = "(^[A-z]+[^:])", remove = TRUE) #The remove = False keeps the older column
+#Change class of columns containing numbers as.numeric 
+age_df_2016[,3:length(age_df_2016)] <- 
+  sapply(age_df_2016[,3:length(age_df_2016)], function(x) as.numeric(x))
+#Create new dataframe
+scaled_age_df_2016 <- age_df_2016
+#Scale dataframe by column
+scaled_age_df_2016 <-
+  scaled_age_df_2016 %>%
+    janitor::adorn_percentages(denominator = "col")
+#Multiply by 100
+scaled_age_df_2016[,3:length(scaled_age_df_2016)] <- 
+  sapply(scaled_age_df_2016[,3:length(scaled_age_df_2016)], function(x) (x*100))
+#Round new scales to 2 digits
+scaled_age_df_2016 <-
+  scaled_age_df_2016 %>%
+    janitor::adorn_rounding(digits = 2)
+#Transform the result to dataframe
+scaled_age_df_2016 <- as.data.frame(scaled_age_df_2016)
+#age_df_2016_reshaped <- transpose(scaled_age_df_2016, make.names=1, keep.names="neighbourhoods")
+##Reshape all neighbourhood columns into one column called variable and the values
+scaled_age_df_2016 <- melt(scaled_age_df_2016, measure = 3:length(scaled_age_df_2016))
+### Male by age
+age_male_2016 <- filter(scaled_age_df_2016, biosex == "Male")
+age_male_2016 <- reshape(age_male_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
+#colnames(scaled_age_df_2016) <- c("neighbourhoods", "age_range", "male", "female") 
+### Female by age
+age_female_2016 <- filter(scaled_age_df_2016, biosex == "Female")
+age_female_2016 <- reshape(age_female_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
+scaled_age_df_2016 <- merge(age_male_2016, age_female_2016, by="variable")
+colnames(scaled_age_df_2016) <- gsub("variable", "neighbourhoods", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("\\.", "_", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("value_", "", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("x", "male", colnames(scaled_age_df_2016))
+colnames(scaled_age_df_2016) <- gsub("y", "female", colnames(scaled_age_df_2016))
+head(scaled_age_df_2016)
+```
+
+
+```{r echo=FALSE, include=TRUE, message=FALSE}
+##### Distribution by income 2016####
+#Select sheet 2016
+clean_income_df_2016 <- main_df_2016
+#Clean header using janitor
+clean_income_df_2016 <- janitor::clean_names(clean_income_df_2016)
+#Select only Population by Income characteristics from the main dataset 
+income_df_2016 <- filter(clean_income_df_2016, category == "Income" & 
+                              topic == "Income of households in 2015")
+#Remove columns 1 to 4 and column "city_of_toronto" 
+income_df_2016 <- income_df_2016[,-c(1:4,6)]
+#Remove rows not related to total income by intervals
+income_df_2016 <- income_df_2016[-c(2:6,8:13,15:20,22:23,38,40:59),]
+#Extract Income in a separate column
+income_df_2016 <- extract(income_df_2016, characteristic, into = "income_range" , 
+                       regex = "([0-9,]+$|[0-9, and over]+$)", remove = TRUE) #The remove = False keeps the older column
+#Extract Income in a separate column
+income_df_2016 <- extract(income_df_2016, income_range, into = "income_range" , 
+                       regex = "([,0-9]+)", remove = TRUE) #The remove = False keeps the older column
+#Remove "," in all numerical variables
+for (i in colnames(income_df_2016[,2:length(income_df_2016)])) {
+  
+  eval(parse(text= paste("income_df_2016$", i, "<- ",   'gsub(",", "", income_df_2016$', i, ")", sep = "")))
+  
+}
+#Change class of columns containing numbers as.numeric 
+income_df_2016[,2:length(income_df_2016)] <- 
+  sapply(income_df_2016[,2:length(income_df_2016)], function(x) as.numeric(x))
+#Create new dataframe
+scaled_income_df_2016 <- income_df_2016
+#Scale dataframe by column
+scaled_income_df_2016 <-
+  scaled_income_df_2016 %>%
+    janitor::adorn_percentages(denominator = "col")
+#Multiply by 100
+scaled_income_df_2016[,2:length(scaled_income_df_2016)] <- 
+  sapply(scaled_income_df_2016[,2:length(scaled_income_df_2016)], function(x) (x*100))
+#Round new scales to 2 digits
+scaled_income_df_2016 <-
+  scaled_income_df_2016 %>%
+    janitor::adorn_rounding(digits = 2)
+#Transform the result to dataframe
+scaled_income_df_2016 <- as.data.frame(scaled_income_df_2016)
+inco_df_2016_reshaped <- transpose(scaled_income_df_2016, make.names=1, keep.names="neighbourhoods")
+##Reshape all neighbourhood columns into one column called variable and the values
+#scaled_income_df_2016 <- reshape2::melt(scaled_income_df_2016, measure = #2:length(scaled_income_df_2016))
+head(inco_df_2016_reshaped)
+```
+
+```{r}
+#### Hierarchical Clustering by Age ###
+#Normalization
+age_all_num <- scaled_age_df_2016[,-1]
+mean_age_df_2016 <- apply(age_all_num,2,mean) 
+sd_age_df_2016 <- apply(age_all_num,2,sd) 
+norm_age_df_2016 <- scale(age_all_num,mean_age_df_2016, sd_age_df_2016)
+#Calculate euclidean distance
+age_distance <- dist(norm_age_df_2016, method = "euclidean")
+#Cluster dendogram with Complete linkage
+age_hclust <- hclust(age_distance)
+plot(age_hclust, hang = -1)
+#Cluster membership
+age_membership <- cutree(age_hclust, k = 5)
+#Cluster means
+aggregate(age_all_num, list(age_membership), mean)
+aggregate(scaled_age_df_2016[,-1], list(age_membership), mean)
+#Silhouette Plot
+plot(silhouette(cutree(age_hclust, k = 5), age_distance))
+#Scree plot
+age_ww_sum_sqrs <- (nrow(age_all_num) -1)*sum(apply(age_all_num,2,mean))
+for (i in 2:20) age_ww_sum_sqrs[i] <- sum(kmeans(age_all_num, centers = i)$withinss)
+plot(1:20, age_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
+```
+
+```{r}
+#### Hierarchical Clustering by Income ###
+#Normalization
+income_all_num <- inco_df_2016_reshaped[,-1]
+mean_income_df_2016 <- apply(income_all_num,2,mean) 
+sd_income_df_2016 <- apply(income_all_num,2,sd) 
+norm_income_df_2016 <- scale(income_all_num,mean_income_df_2016, sd_income_df_2016)
+#Calculate euclidean distance
+income_distance <- dist(norm_income_df_2016, method = "euclidean")
+#Cluster dendogram with Complete linkincome
+income_hclust <- hclust(income_distance)
+plot(income_hclust, hang = -1, cex=.4)
+#Cluster membership
+income_membership <- cutree(income_hclust, k = 5)
+#Cluster means
+aggregate(income_all_num, list(income_membership), mean)
+aggregate(inco_df_2016_reshaped[,-1], list(income_membership), mean)
+#Silhouette Plot
+plot(silhouette(cutree(income_hclust, k = 5), income_distance))
+#Scree plot
+income_ww_sum_sqrs <- (nrow(income_all_num) -1)*sum(apply(income_all_num,2,mean))
+for (i in 2:20) income_ww_sum_sqrs[i] <- sum(kmeans(income_all_num, centers = i)$withinss)
+plot(1:20, income_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
+```
+
+```{r}
+### K-means clustering by age ###
+age_kmeans_clust <- kmeans(norm_age_df_2016,6)
+age_kmeans_clust
+```
+
+```{r}
+### K-means clustering by age ###
+income_kmeans_clust <- kmeans(norm_income_df_2016,7)
+income_kmeans_clust
+```
+
+```{r}
+### Cleaning geo-location dataset
+clean_geo_data <- janitor::clean_names(geo_data)
+clean_geo_data <- extract(clean_geo_data, area_name, into = "neighbourhoods" , regex = "([^(0-9)]+)")
+clean_geo_data["neighbourhoods"] <- 
+  janitor::make_clean_names(as.matrix(clean_geo_data["neighbourhoods"]))
+clean_geo_data <- janitor::clean_names(clean_geo_data)
+clean_geo_data <- select(clean_geo_data, neighbourhoods, longitude, latitude, geometry)
+filter(clean_geo_data, neighbourhoods %in% c("mimico","weston_pellam_park"))
+clean_geo_data["neighbourhoods"][c(17,67),] <- c("mimico_includes_humber_bay_shores","weston_pelham_park")
+clean_geo_data
+```
+
+```{r}
+### Merge age hierarchical cluster and Kmeans classification with the dataset ###
+#Merge Kmeans
+df_kmeans_age <- mutate(scaled_age_df_2016, kmeans = age_kmeans_clust$cluster)
+merge_age_clust <- merge(df_kmeans_age, clean_geo_data, by = 'neighbourhoods')
+
+df_kmeans_income <- mutate(inco_df_2016_reshaped, kmeans = income_kmeans_clust$cluster)
+merge_income_clust <- merge(df_kmeans_income, clean_geo_data, by = 'neighbourhoods')
+
+#Merge Hclustering
+hcluster <- cutree(plot_data_comp, k=4)
+hcluster <- as.data.frame(hcluster)
+hcluster$hcluster
+df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
+
+#Plot all majors without palette
+merge_age_clust$kmeans <- as.factor(merge_age_clust$kmeans)
+sf_merged_df <- st_sf(merge_age_clust, sf_column_name = "geometry")
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("kmeans"), style = "pretty") +
+  tm_text("neighbourhoods", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
+
+#Plot all majors without palette
+merge_income_clust$kmeans <- as.factor(merge_income_clust$kmeans)
+sf_merged_df <- st_sf(merge_income_clust, sf_column_name = "geometry")
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("kmeans"), style = "pretty") +
+  tm_text("neighbourhoods", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
+```
