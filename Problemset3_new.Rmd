@@ -62,7 +62,6 @@ City of Toronto Neighbourhood Profiles data set is sourced from several Census t
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, warning=FALSE}
 ##### Distribution by age 2016 ####
-
 #Select sheet 2016
 clean_header_df_2016 <- main_df_2016
 #Clean header using janitor
@@ -70,30 +69,19 @@ clean_header_df_2016 <- janitor::clean_names(clean_header_df_2016)
 #Select only Population by Age characteristics from the main dataset 
 age_df_2016 <- filter(clean_header_df_2016, category == "Population" & 
                               topic == "Age characteristics")
-
-
 #Remove rows 1 to 6. It contains general information not related with the subject under analysis
 age_df_2016 <- age_df_2016[7:nrow(age_df_2016),]
-
 #Remove first 4 columns and column "city_of_toronto" 
 age_df_2016 <- age_df_2016[,-c(1:4,6)]
-
-
 #Select only the characters after the word "to" or those finishing in "over"
 age_df_2016 <- extract(age_df_2016, characteristic, into = "age_range" , regex = "([to][ 0-9]+[ years]+$|[0-9 ]+[years and over]+$)", remove = FALSE)
-
 #Extract only the numbers 
 age_df_2016 <- extract(age_df_2016, age_range, into = "age_range" , regex = "([0-9]+)", remove = TRUE)
-
 #Extract biosex in a separate column
 age_df_2016 <- extract(age_df_2016, characteristic, into = "biosex" , regex = "(^[A-z]+[^:])", remove = TRUE) #The remove = False keeps the older column
-
-
-
 #Change class of columns containing numbers as.numeric 
 age_df_2016[,3:length(age_df_2016)] <- 
   sapply(age_df_2016[,3:length(age_df_2016)], function(x) as.numeric(x))
-
 #Create new dataframe
 scaled_age_df_2016 <- age_df_2016
 #Scale dataframe by column
@@ -109,83 +97,54 @@ scaled_age_df_2016 <-
     janitor::adorn_rounding(digits = 2)
 #Transform the result to dataframe
 scaled_age_df_2016 <- as.data.frame(scaled_age_df_2016)
-
-
 #age_df_2016_reshaped <- transpose(scaled_age_df_2016, make.names=1, keep.names="neighbourhoods")
-
 ##Reshape all neighbourhood columns into one column called variable and the values
 scaled_age_df_2016 <- melt(scaled_age_df_2016, measure = 3:length(scaled_age_df_2016))
-
-
 ### Male by age
 age_male_2016 <- filter(scaled_age_df_2016, biosex == "Male")
-
 age_male_2016 <- reshape(age_male_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
-
 #colnames(scaled_age_df_2016) <- c("neighbourhoods", "age_range", "male", "female") 
-
-
 ### Female by age
 age_female_2016 <- filter(scaled_age_df_2016, biosex == "Female")
-
 age_female_2016 <- reshape(age_female_2016[,-1], idvar="variable", timevar="age_range", direction="wide")
-
 scaled_age_df_2016 <- merge(age_male_2016, age_female_2016, by="variable")
-
 colnames(scaled_age_df_2016) <- gsub("variable", "neighbourhoods", colnames(scaled_age_df_2016))
 colnames(scaled_age_df_2016) <- gsub("\\.", "_", colnames(scaled_age_df_2016))
-
 colnames(scaled_age_df_2016) <- gsub("value_", "", colnames(scaled_age_df_2016))
-
 colnames(scaled_age_df_2016) <- gsub("x", "male", colnames(scaled_age_df_2016))
 colnames(scaled_age_df_2016) <- gsub("y", "female", colnames(scaled_age_df_2016))
-
-
 head(scaled_age_df_2016)
 ```
 
 
 ```{r echo=FALSE, include=TRUE, message=FALSE}
 ##### Distribution by income 2016####
-
 #Select sheet 2016
 clean_income_df_2016 <- main_df_2016
 #Clean header using janitor
 clean_income_df_2016 <- janitor::clean_names(clean_income_df_2016)
-
-
 #Select only Population by Income characteristics from the main dataset 
 income_df_2016 <- filter(clean_income_df_2016, category == "Income" & 
                               topic == "Income of households in 2015")
-
 #Remove columns 1 to 4 and column "city_of_toronto" 
 income_df_2016 <- income_df_2016[,-c(1:4,6)]
-
 #Remove rows not related to total income by intervals
 income_df_2016 <- income_df_2016[-c(2:6,8:13,15:20,22:23,38,40:59),]
-
 #Extract Income in a separate column
 income_df_2016 <- extract(income_df_2016, characteristic, into = "income_range" , 
                        regex = "([0-9,]+$|[0-9, and over]+$)", remove = TRUE) #The remove = False keeps the older column
-
-
 #Extract Income in a separate column
 income_df_2016 <- extract(income_df_2016, income_range, into = "income_range" , 
                        regex = "([,0-9]+)", remove = TRUE) #The remove = False keeps the older column
-
-
-
 #Remove "," in all numerical variables
 for (i in colnames(income_df_2016[,2:length(income_df_2016)])) {
   
   eval(parse(text= paste("income_df_2016$", i, "<- ",   'gsub(",", "", income_df_2016$', i, ")", sep = "")))
   
 }
-
 #Change class of columns containing numbers as.numeric 
 income_df_2016[,2:length(income_df_2016)] <- 
   sapply(income_df_2016[,2:length(income_df_2016)], function(x) as.numeric(x))
-
 #Create new dataframe
 scaled_income_df_2016 <- income_df_2016
 #Scale dataframe by column
@@ -201,97 +160,72 @@ scaled_income_df_2016 <-
     janitor::adorn_rounding(digits = 2)
 #Transform the result to dataframe
 scaled_income_df_2016 <- as.data.frame(scaled_income_df_2016)
-
 inco_df_2016_reshaped <- transpose(scaled_income_df_2016, make.names=1, keep.names="neighbourhoods")
-
-
-
 ##Reshape all neighbourhood columns into one column called variable and the values
 #scaled_income_df_2016 <- reshape2::melt(scaled_income_df_2016, measure = #2:length(scaled_income_df_2016))
-
-
 head(inco_df_2016_reshaped)
 ```
 
 ```{r}
 #### Hierarchical Clustering by Age ###
-
 #Normalization
 age_all_num <- scaled_age_df_2016[,-1]
 mean_age_df_2016 <- apply(age_all_num,2,mean) 
 sd_age_df_2016 <- apply(age_all_num,2,sd) 
 norm_age_df_2016 <- scale(age_all_num,mean_age_df_2016, sd_age_df_2016)
-
 #Calculate euclidean distance
 age_distance <- dist(norm_age_df_2016, method = "euclidean")
-
 #Cluster dendogram with Complete linkage
 age_hclust <- hclust(age_distance)
 plot(age_hclust, hang = -1)
-
 #Cluster membership
 age_membership <- cutree(age_hclust, k = 5)
-
 #Cluster means
 aggregate(age_all_num, list(age_membership), mean)
 aggregate(scaled_age_df_2016[,-1], list(age_membership), mean)
-
 #Silhouette Plot
 plot(silhouette(cutree(age_hclust, k = 5), age_distance))
-
 #Scree plot
 age_ww_sum_sqrs <- (nrow(age_all_num) -1)*sum(apply(age_all_num,2,mean))
 for (i in 2:20) age_ww_sum_sqrs[i] <- sum(kmeans(age_all_num, centers = i)$withinss)
 plot(1:20, age_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
-
 ```
 
 ```{r}
 #### Hierarchical Clustering by Income ###
-
 #Normalization
 income_all_num <- inco_df_2016_reshaped[,-1]
 mean_income_df_2016 <- apply(income_all_num,2,mean) 
 sd_income_df_2016 <- apply(income_all_num,2,sd) 
 norm_income_df_2016 <- scale(income_all_num,mean_income_df_2016, sd_income_df_2016)
-
 #Calculate euclidean distance
 income_distance <- dist(norm_income_df_2016, method = "euclidean")
-
 #Cluster dendogram with Complete linkincome
 income_hclust <- hclust(income_distance)
-plot(income_hclust, hang = -1)
-
+plot(income_hclust, hang = -1, cex=.4)
 #Cluster membership
 income_membership <- cutree(income_hclust, k = 5)
-
 #Cluster means
 aggregate(income_all_num, list(income_membership), mean)
 aggregate(inco_df_2016_reshaped[,-1], list(income_membership), mean)
-
 #Silhouette Plot
 plot(silhouette(cutree(income_hclust, k = 5), income_distance))
-
 #Scree plot
 income_ww_sum_sqrs <- (nrow(income_all_num) -1)*sum(apply(income_all_num,2,mean))
 for (i in 2:20) income_ww_sum_sqrs[i] <- sum(kmeans(income_all_num, centers = i)$withinss)
 plot(1:20, income_ww_sum_sqrs, type="b", xlab="number of clusters", ylab = "Within group SS")
-
-
 ```
 
 ```{r}
 ### K-means clustering by age ###
-age_kmeans_clust <- kmeans(norm_age_df_2016,4)
+age_kmeans_clust <- kmeans(norm_age_df_2016,6)
 age_kmeans_clust
-
 ```
 
 ```{r}
 ### K-means clustering by age ###
-income_kmeans_clust <- kmeans(norm_income_df_2016,3)
+income_kmeans_clust <- kmeans(norm_income_df_2016,7)
 income_kmeans_clust
-
 ```
 
 ```{r}
@@ -306,15 +240,15 @@ filter(clean_geo_data, neighbourhoods %in% c("mimico","weston_pellam_park"))
 clean_geo_data["neighbourhoods"][c(17,67),] <- c("mimico_includes_humber_bay_shores","weston_pelham_park")
 clean_geo_data
 ```
-```
 
 ```{r}
 ### Merge age hierarchical cluster and Kmeans classification with the dataset ###
-
 #Merge Kmeans
 df_kmeans_age <- mutate(scaled_age_df_2016, kmeans = age_kmeans_clust$cluster)
-
 merge_age_clust <- merge(df_kmeans_age, clean_geo_data, by = 'neighbourhoods')
+
+df_kmeans_income <- mutate(inco_df_2016_reshaped, kmeans = income_kmeans_clust$cluster)
+merge_income_clust <- merge(df_kmeans_income, clean_geo_data, by = 'neighbourhoods')
 
 #Merge Hclustering
 hcluster <- cutree(plot_data_comp, k=4)
@@ -322,75 +256,23 @@ hcluster <- as.data.frame(hcluster)
 hcluster$hcluster
 df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
 
+#Plot all majors without palette
+merge_age_clust$kmeans <- as.factor(merge_age_clust$kmeans)
+sf_merged_df <- st_sf(merge_age_clust, sf_column_name = "geometry")
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("kmeans"), style = "pretty") +
+  tm_text("neighbourhoods", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
 
-
+#Plot all majors without palette
+merge_income_clust$kmeans <- as.factor(merge_income_clust$kmeans)
+sf_merged_df <- st_sf(merge_income_clust, sf_column_name = "geometry")
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("kmeans"), style = "pretty") +
+  tm_text("neighbourhoods", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
 ```
-
-
-
-
-
-
-
-
-
-
-
-\pagebreak
-# Appendix A
-```{r ref.label=knitr::all_labels(), echo = T, eval = F, tidy=TRUE, tidy.opts=list(width.cutoff=60), results='asis', width.cutoff=60}
-```
-
-\pagebreak
-# References
-
-
-Open Data Dataset. (n.d.). Retrieved January 30, 2020, from https://open.toronto.ca/dataset/
-wellbeing-toronto-demographics-nhs-indicators/
-
-R Core Team (2019). R: A language and environment for statistical computing. R
-Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
-
-H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
-
-Sharla Gelfand (2019). opendatatoronto: Access the City of Toronto Open Data Portal. R
-package version 0.1.1. https://CRAN.R-project.org/package=opendatatoronto
-  
-Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2019). dplyr: A Grammar
-of Data Manipulation. R package version 0.8.3. https://CRAN.R-project.org/package=dplyr
-
-Hadley Wickham and Lionel Henry (2019). tidyr: Tidy Messy Data. R package version 1.0.0.
-https://CRAN.R-project.org/package=tidyr
-
-Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software,
-4(43), 1686, https://doi.org/10.21105/joss.01686
-
-Yihui Xie (2019). knitr: A General-Purpose Package for Dynamic Report Generation in R. R
-package version 1.25.
-
-Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and Hall/CRC.
-ISBN 978-1498716963
-
-Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible Research in R. In Victoria
-Stodden, Friedrich Leisch and Roger D. Peng, editors, Implementing Reproducible
-
-Matt Dowle and Arun Srinivasan (2019). data.table: Extension of `data.frame`. R package
-version 1.12.6. https://CRAN.R-project.org/package=data.table
-Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
-
-Pebesma, E., 2018. Simple Features for R: Standardized Support for Spatial Vector Data.
-The R Journal 10 (1), 439-446, https://doi.org/10.32614/RJ-2018-009
-
-Tennekes M (2018). “tmap: Thematic Maps in R.” _Journal of Statistical Software_, *84*(6),
-1-39. doi: 10.18637/jss.v084.i06 (URL: https://doi.org/10.18637/jss.v084.i06).
-
-Martijn Tennekes (2019). tmaptools: Thematic Map Tools. R package version 2.0-2.
-https://CRAN.R-project.org/package=tmaptools
-
-Joe Cheng, Bhaskar Karambelkar and Yihui Xie (2019). leaflet: Create Interactive Web
-Maps with the JavaScript 'Leaflet' Library. R package version 2.0.3.
-https://CRAN.R-project.org/package=leaflet
-
-Maechler, M., Rousseeuw, P., Struyf, A., Hubert, M., Hornik,
-K.(2019).  cluster: Cluster Analysis Basics and Extensions. R package
-version 2.1.0.
