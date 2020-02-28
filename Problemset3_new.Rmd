@@ -22,7 +22,12 @@ library(sf)
 library(tmap)
 library(tmaptools)
 library(leaflet)
-library(corrplot)
+library(corrplot) #For correlation matrix
+library(car)
+library(dbscan) # For density-based model
+library(fpc) # For dessity-based model
+library(factoextra)
+
 ```
 
 ```{r include=FALSE}
@@ -135,6 +140,20 @@ df_cleaned <-
 
 df_cleaned
   
+###draw correlation matrix of the numeric independent variables only
+num_data <- df_cleaned[,-c(1:2)] ### only numeric independent vars
+colnames(num_data) <- c("population","total_highest_cert","no_certificate","18_to_64_per","visible_minority")
+correlationMatrix <- cor(num_data, method = "pearson") 
+correlationMatrix    # a 6x6 matrix   
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot(correlationMatrix, method="color", col=col(200),   
+         type="upper", order="hclust", 
+         tl.col="black", tl.srt=45, tl.cex= 0.7, #Text label color and rotation
+         # Combine with significance
+         sig.level = 0.01, 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE
+)
 ```
 
 ```{r echo= FALSE, include=FALSE}
@@ -167,6 +186,7 @@ corrplot(correlationMatrix, method="color", col=col(200),
          # hide correlation coefficient on the principal diagonal
          diag=FALSE
 )
+
 
 ```
 # Introduction
@@ -245,3 +265,33 @@ tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size
   tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
   tm_facets(sync = TRUE, ncol = 1)
 ```
+
+
+```{r}
+set.seed(123)
+km.res <- kmeans(num_data, 2, nstart = 25)
+fviz_cluster(km.res, num_data,  geom = "point", 
+             ellipse= FALSE, show.clust.cent = FALSE,
+             palette = "jco", ggtheme = theme_classic())
+
+
+dbscan::kNNdistplot(num_data, k =  3)
+abline(h = .95, lty = 2)
+
+
+pred_dbscan <- fpc::dbscan(num_data, .95, 5)
+pred_dbscan
+
+fviz_cluster(pred_dbscan, num_data, geom = "point")
+
+?kNN
+
+```
+
+
+
+
+
+
+https://www.datanovia.com/en/lessons/dbscan-density-based-clustering-essentials/
+
