@@ -1,0 +1,244 @@
+---
+title: "ProblemSet2_new"
+author: "Ke-li Chiu & Diego Mamanche Castellanos"
+date: "06/02/2020"
+output:
+  pdf_document: default
+  html_document: default
+abstract: Abstract nnnnn nnnnnn
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r, echo=FALSE, include=FALSE}
+# Importing libraries
+library(opendatatoronto)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(sf)
+library(tmap)
+library(tmaptools)
+library(leaflet)
+
+```
+
+```{r include=FALSE}
+setwd("~/Desktop/MI/INF2178 Experienment DS/Problem set 3")
+# Get the resource we want from this package
+neighbourhood_raw <- list_package_resources("6e19a90f-971c-46b3-852c-0c48c436d1fc") %>% 
+  filter(name == "neighbourhood-profiles-2016-csv") %>% 
+  get_resource()
+main_df_raw <- neighbourhood_raw
+main_df_raw <- as.data.frame(main_df_raw)
+# Remove "X2011 prefix from all column names"
+```
+```{r include=FALSE}
+### GEO-LOCATION DATASET TORONTO BY NEIGHBOURHOODS ###
+# get package
+package <- show_package("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
+package
+# get all resources for this package
+resources <- list_package_resources("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
+# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+# load the first datastore resource as a sample
+geo_data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+
+### Cleaning geo-location dataset
+clean_geo_data <- janitor::clean_names(geo_data)
+clean_geo_data <- extract(clean_geo_data, area_name, into = "neighbourhoods" , regex = "([^(0-9)]+)")
+clean_geo_data["neighbourhoods"] <- 
+  janitor::make_clean_names(as.matrix(clean_geo_data["neighbourhoods"]))
+clean_geo_data <- janitor::clean_names(clean_geo_data)
+clean_geo_data <- select(clean_geo_data, neighbourhoods, longitude, latitude, geometry)
+filter(clean_geo_data, neighbourhoods %in% c("mimico","weston_pellam_park"))
+clean_geo_data["neighbourhoods"][c(17,67),] <- c("mimico_includes_humber_bay_shores","weston_pelham_park")
+clean_geo_data
+```
+
+```{r echo=FALSE, include=FALSE}
+#Save neighbourhoods into a dataframe
+col_names_2011 <- as.data.frame(colnames(main_df_raw))
+col_names_2011 <- col_names_2011[7:nrow(col_names_2011),]
+col_names_2011 <- as.data.frame(col_names_2011)
+colnames(col_names_2011) <- "neighbourhoods"
+
+#Filter education per neighbourhood
+main_df <- filter(main_df_raw, 
+                      Category == "Neighbourhood Information" | 
+                      Category == "Income" | 
+                      Characteristic == "Population, 2016" | 
+                      Characteristic == "Rate of unsuitable housing"|
+                      Topic == "Visible minority population" | 
+                      Topic == "Highest certificate, diploma or degree" |
+                      Topic == "Low income in 2015")
+
+```
+
+```{r echo= FALSE, include = FALSE}
+# Reshape the dataframe (swap row and columns)
+main_df_reshaped <- data.frame(t(main_df[-1]))
+colnames(main_df_reshaped) <- main_df[, 1]
+# Slice the reshaped dataframe
+main_df_sliced <- main_df_reshaped %>%
+  dplyr::slice(4:nrow(main_df_reshaped))
+# Turn characteristics to column names
+names(main_df_sliced) <- as.matrix(main_df_sliced[1, ])
+main_df_sliced <- main_df_sliced[-1, ]
+main_df_sliced[] <- lapply(main_df_sliced, function(x) type.convert(as.character(x)))
+
+# Clean column names
+library(janitor)
+main_df_sliced <- main_df_sliced %>% clean_names()
+main_df_sliced$total_population_aged_15_years_and_over_by_major_field_of_study_classification_of_instructional_programs_cip_2011
+main_df_sliced$x18_to_64_years_percent
+main_df_sliced = main_df_sliced[-1,]
+main_df_sliced <- mutate(main_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
+
+# Assign 0 as Toronto neighbourhood number
+main_df_sliced$neighbourhood_number <- as.numeric(as.character(main_df_sliced$neighbourhood_number)) 
+main_df_sliced$neighbourhood_number[is.na(main_df_sliced$neighbourhood_number)] <- 0 
+main_df_sliced$neighbourhood_number <- as.factor(main_df_sliced$neighbourhood_number)
+```
+```{r echo= FALSE, include=FALSE}
+# Select wanted columns to make a new dataframe
+df_cleaned <- main_df_sliced %>%
+  select(
+    "neighbourhood_number",
+    "neighbourhoods",
+    "population_2016",
+    "total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data",
+    
+    # education
+    "no_certificate_diploma_or_degree_2",
+
+    # low income percentage
+    "x18_to_64_years_percent",
+    
+    # visible minority
+    "total_visible_minority_population"
+  )
+
+# transform df to numeric
+df_cleaned$population_2016 = as.numeric(gsub(",", "", df_cleaned$population_2016))
+df_cleaned$total_visible_minority_population = as.numeric(gsub(",", "", df_cleaned$total_visible_minority_population))
+df_cleaned
+```
+
+``` {r echo= FALSE, include=FALSE}
+## Turn absolute values to percentage
+total_population_education <- df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
+
+# Education data transformation
+df_cleaned <- 
+  mutate(df_cleaned, no_certificate_diploma_or_degree_2 =
+           (df_cleaned$no_certificate_diploma_or_degree_2/total_population_education)*100)
+
+# Visible miniority data transformation
+df_cleaned <- 
+  mutate(df_cleaned, total_visible_minority_population =
+           (df_cleaned$total_visible_minority_population/df_cleaned$population_2016)*100)
+```
+
+```{r echo= FALSE, include=FALSE}
+# Normalize data by subtracting the mean and dividing it by the standard deviation.
+df_selected_columns = df_cleaned[,c(
+  # Education
+   "no_certificate_diploma_or_degree_2",
+
+  # Low income
+   "x18_to_64_years_percent", # low income
+  
+  # Visible minority
+   "total_visible_minority_population"
+  )]
+means = apply(df_selected_columns,2,mean)
+sds = apply(df_selected_columns,2,sd)
+nor = scale(df_selected_columns,means,sds)
+nor
+```
+# Introduction
+
+# Dataset and Method Description
+
+## Limitation of the Dataset and Approach
+
+## Ethical Considerations
+
+# Clustering Toronto's Neighbourhoods by Feautures of Education, Income and Visible Minority Status
+
+## Euclidean Distance Between Toronto's Neighbourhoods
+
+```{r echo=FALSE}
+# Get the distance ot the normalized data
+distance = dist(nor)
+plot_data <- nor
+# Hierarchical agglomerative clustering using default complete linkage 
+plot_data_comp = hclust(distance)
+plot(plot_data_comp,labels=plot_data_comp$ID,main='Default from hclust', cex=.4)
+```
+
+## Determine optimal number of clusters
+
+```{r echo=FALSE}
+# Scree Plot
+wss <- (nrow(nor)-1)*sum(apply(nor,2,var))
+for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+```
+
+## Assessing Characteristics of Neighbourhoods
+
+``` {r echo=FALSE}
+# Characterizing clusters 
+member_comp = cutree(plot_data_comp,4)
+aggregate(nor,list(member_comp),mean)
+```
+```{r echo=FALSE}
+plot(plot_data_comp,hang=-1, cex=.4)
+rect.hclust(plot_data_comp, k = 4, border = "red")
+```
+
+## Clusters Distribution
+
+```{r echo=FALSE}
+#get hclust label to neighbourhoods
+hcluster <- cutree(plot_data_comp, k=4)
+hcluster <- as.data.frame(hcluster)
+df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
+
+#merge dataset with geo dataset
+df_w_vector["neighbourhoods"] <- 
+  janitor::make_clean_names(as.matrix(df_w_vector["neighbourhoods"]))
+merged_df <- merge(df_w_vector, clean_geo_data, by = 'neighbourhoods')
+merged_df$hcluster <- as.factor(merged_df$hcluster)
+sf_merged_df <- st_sf(merged_df, sf_column_name = "geometry")
+
+colors <- c("#00AFBB", "#E7B800", "#FC4E07", "#000000")
+colors <- colors[merged_df$hcluster]
+
+plot(df_selected_columns, col = colors)
+par(xpd=TRUE)
+legend(legend = unique(merged_df$hcluster), col =unique(colors), pch = 19, bty = "o", "bottomright", cex = .8)
+
+# how to label the clusters
+# label the data entries(cluster number)
+# going back from distrance to real values
+```
+
+## Toronto's Neighbourhoods Clusters Map
+
+```{r echo=FALSE}
+#Plot all majors without palette
+tmap_mode("plot")
+tm_shape(sf_merged_df) +
+tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+  tm_polygons(c("hcluster"), style = "pretty") +
+  tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_facets(sync = TRUE, ncol = 1)
+```
+
+
