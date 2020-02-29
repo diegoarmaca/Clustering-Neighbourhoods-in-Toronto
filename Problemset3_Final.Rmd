@@ -87,7 +87,7 @@ main_df <- filter(main_df_raw,
                       Topic == "Low income in 2015")
 ```
 
-```{r echo= FALSE, include = FALSE, linewidth=60}
+```{r echo= FALSE, include = FALSE, linewidth=60, width.cutoff=60}
 # Reshape the dataframe (swap row and columns)
 main_df_reshaped <- data.frame(t(main_df[-1]))
 colnames(main_df_reshaped) <- main_df[, 1]
@@ -131,7 +131,7 @@ df_cleaned$total_visible_minority_population =
 df_cleaned
 ```
 
-``` {r echo= FALSE, include=FALSE}
+``` {r echo= FALSE, include=FALSE, width.cutoff=60}
 ## Turn absolute values to percentage
 total_population_education <- 
   df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
@@ -154,7 +154,9 @@ Troubling differences in poverty, education and diversity exist among neighbourh
 
 ## Dataset
 
-To address the research question, the City of Toronto, through the Open Toronto Data Portal, offers a comprehensive dataset called Neighbourhood Profiles. The data set contains several categories divided by topics, that in turn, are broken down into different characteristics, presented in a total of 2383 rows. As for the neighbourhoods, all of them are displayed as columns. For this analysis, the variables "no certificate, diploma, or degree 2", "18 to 64 years %", and "total visible minority population" will feed into the model to answer the research question. The variables are renamed to "no certificate," "visible minority," and "low income." Descriptive statistics of the variables are shown in Figure 1.
+To address the research question, the City of Toronto, through the Open Toronto Data Portal, offers a comprehensive dataset called Neighbourhood Profiles. The data set contains several categories divided by topics, that in turn, are broken down into different characteristics, presented in a total of 2383 rows. As for the neighbourhoods, all of them are displayed as columns. For this analysis, the variables "no certificate, diploma, or degree 2", "18 to 64 years %", and "total visible minority population" will feed into the model to answer the research question. The variables are renamed to "no certificate," "visible minority," and "low income".
+
+Descriptive statistics of the variables are shown in Figure 1.
 
 
 ```{r include=FALSE, message=FALSE, fig.height = 5, fig.width = 1, warning=FALSE} 
@@ -193,17 +195,15 @@ grid2 <- grid.arrange(tableGrob(stats_table, theme = tt1, rows = NULL), ncol = 1
 ```{r include=TRUE}
 #grid.arrange(grid1, grid2, ncol = 2, nrow = 1, padding = 1, heights=c(2,3))
  grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
-         arrangeGrob(grid2, ncol=1, nrow=1), heights=c(22,1), widths=c(1,3))
+         arrangeGrob(grid2, ncol=1, nrow=1), heights=c(28,1), widths=c(1,3), 
+         bottom = "Figure 1: Descriptive statistics of the data")
 ```
-
-Figure 1: Descriptive statistics of the data 
 
 ## Method
 
 Exposing the most disadvantaged neighbourhoods in the City of Toronto is a classification case. The goal is to group all neighbourhoods by clusters based on how similar they are. To achieve this, the classification method used is hierarchical clustering, an unsupervised machine learning technique that partitions a set of objects with similar characteristics into subsets.
 
-Different approaches were analyzed. Clustering techniques such as K-means, Density-based classification, and Hierarchical clustering were tested out with the dataset, finding the last one the most suitable for this investigation. Hierarchical clustering allows us to view at once, each possible number of clusters (k) through the dendrogram, which is a tree representation of those clusters. Moreover, the hierarchical method needs no k in advance. The undetermination of k is important because the purpose of this study is to find the most disadvantaged neighbourhoods without pre-assumption on the number of groups there should be. Lastly, by using the Elbow curve, the best number of clusters (k) can be impartially calculated.
-
+Different approaches were analyzed. Clustering techniques such as K-means, Density-based classification, and Hierarchical clustering were tested out with the dataset, finding the last one the most suitable for this investigation. Hierarchical clustering allows to view at once, each possible number of clusters (k) through the dendrogram, which is a tree representation of those clusters. Moreover, the hierarchical method needs no k in advance and allows to identify natural clusters, often without any prior information of the data structure. It is important in this study because the purpose is to find the most vulnerable neighborhoods without any bias. Lastly, by using the Elbow curve, the best number of clusters (k) can be impartially calculated.
 ```{r}
 ###draw correlation matrix of the numeric independent variables only
 num_data <- df_cleaned[,-c(1:2)] ### only numeric independent vars
@@ -260,6 +260,8 @@ In 2016, the long-form Census became mandatory once again and was distributed to
 
 Another limitation lies in the lack of time-series data to be compared with the data sourced from 2016. This prevents a holistic observation in the change of socioeconomic dynamics in the neighbourhoods across time. The neighbourhoods may not be assigned to the same clusters based on data sourced from past years. Such shifts would provide insights that are not available in this study.
 
+Finally, the Hierarchical clustering has some limitations such as sensitivity to noise and outliers, once the grouping is made by, it can never undo, and for large data sets, it has a high computational cost. 
+
 ## Ethical Considerations
 Features such as race or income can be highly predictive for certain problems. The three variables in poverty, education, and visible minority population in this clustering analysis do not provide details of underlying contributors to the social division in the neighbourhoods. Without further investigation, the study possibly shapes the categories of perception and classification through which readers internalize social divisions. These categories would shape the way we envision class structure and social problems associated with the neighbourhoods and paved the way for implicit stigmatization. More crucially, the incorporation of these categories would influence decisions to buy properties and, for parents, to send children to the local schools.
 
@@ -302,26 +304,34 @@ Figure 4: Grouping neghbourhoods into two clusters
 ## Assessing Characteristics of Neighbourhood Clusters
 The two clusters have different numbers of members. As shown in Table 1, in Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table 2 showcases the distances between the means of the two clusters in normalized data values. The distinction between the two clusters is clear. As shown in Table 2, all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicate its characteristics in higher percentage in poverty, lack of education and visibile minority population.
 
-```{r echo=FALSE, include=TRUE}
+```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 1.5, fig.width = 5, warning=FALSE, fig.align='center'}
 # Characterizing clusters 
-member = cutree(plot_data_comp,2)
-kable(table(member))
+member <- cutree(plot_data_comp,2)
+freq_df <- table(member)
+freq_df <- data.frame(freq_df)
+group1_grob <- grid.arrange(tableGrob(freq_df, theme = tt1, rows = NULL), 
+                            ncol = 1, nrow = 1, 
+                            bottom = "Table 1: Cluster membership")
+
 ```
 
-Table 1: Cluster membership
 
-```{r echo=FALSE, include=TRUE}
+```{r echo=FALSE, include=TRUE,message=FALSE, fig.height = 1.5, fig.width = 7, warning=FALSE, fig.align='center'}
 member_df <- as.data.frame(member)
 variables_df <- aggregate(nor,list(member),mean)
-kable(variables_df)
-```
+variables_df <- round(variables_df,3)
 
-Table 2: Cluster mean distance in normalized data values
+
+group1_grob <- grid.arrange(tableGrob(variables_df, theme = tt1, rows = NULL), 
+                            ncol = 1, nrow = 1, 
+                            bottom = "Table 2: Cluster mean distance in normalized data values")
+
+```
 
 ## Clusters Distribution
 The grouped scattor plots in Figure 5 show that there is a pattern of neighbourhoods distribution with the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which the position visualizes their characteristics in higher percentage in poverty, lack of education and visibile minority population. The exact differences in the two groups can be assessed in the summary tables of the two clusters in Table 3 and Table 4.
 
-```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 4, fig.width = 7, warning=FALSE}
+```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3.5, fig.width = 7, warning=FALSE}
 #get hclust label to neighbourhoods
 hcluster <- cutree(plot_data_comp, k=2)
 hcluster <- as.data.frame(hcluster)
