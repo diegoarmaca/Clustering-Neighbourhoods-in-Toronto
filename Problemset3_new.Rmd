@@ -1,7 +1,7 @@
 ---
-title: "ProblemSet2_new"
-author: "Ke-li Chiu & Diego Mamanche Castellanos"
-date: "06/02/2020"
+title: "Toronto's Underpriviledged Neighbourhoods are Close to Each Other"
+author: "Ke-Li Chiu & Diego Mamanche Castellanos"
+date: "29/02/2020"
 output:
   pdf_document: default
   html_document: default
@@ -27,7 +27,6 @@ library(car)
 library(dbscan) # For density-based model
 library(fpc) # For dessity-based model
 library(factoextra)
-
 ```
 
 ```{r include=FALSE}
@@ -137,7 +136,6 @@ df_cleaned <-
 df_cleaned <- 
   mutate(df_cleaned, total_visible_minority_population =
            (df_cleaned$total_visible_minority_population/df_cleaned$population_2016)*100)
-
 df_cleaned
   
 ###draw correlation matrix of the numeric independent variables only
@@ -171,7 +169,6 @@ means = apply(df_selected_columns,2,mean)
 sds = apply(df_selected_columns,2,sd)
 nor = scale(df_selected_columns,means,sds)
 nor
-
 ###draw correlation matrix of the numeric variables only
 num_data <- as.data.frame(nor) ### only numeric independent vars
 colnames(num_data) <- c("no_certificate","18_to_64_per","visible_minority")
@@ -186,16 +183,21 @@ corrplot(correlationMatrix, method="color", col=col(200),
          # hide correlation coefficient on the principal diagonal
          diag=FALSE
 )
-
-
 ```
 # Introduction
+There are 140 neighbourhoods officially recognized by the City of Toronto and the divisions are used for internal planning purposes. Many shorcomings of economic or social policy planning and making come from the over-reliance on “one-size-fits-all” approach that overlooks their differences in socioeconomic status. However, customizing policies for 140 neighbourhoods is also improbable. Can we then create groups of neighbourhoods that share similar socioeconomic traits so policy makers can plan strategically and efficiently? Can we identify the group of neighbourhoods that are vulnerable in their social and economic development so they receive more attention from the Government? In this study, a clustering analysis is conducted to be used to define neighborhood types and display their characteristics and spatial patterns.
+
+Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to our choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, population percentage of residents who have no education certificate, and visible minority population percentage. We intend to then articulate the social stratification and spatial stratification in the City of Toronto.
 
 # Dataset and Method Description
 
 ## Limitation of the Dataset and Approach
+In 2016, the long form Census became mandatory once again, and was distributed to one out of every four households (25%). Income data were gathered solely by linking with administrative data (Canada Revenue Agency). Census data is subject to error such as coverage, non-response, and sampling errors. Moreover, althought the Census is mandatory, it is still likely to be affected by Response Bias because people do not always provide accurate or truthful information. This is especially common in collection of income data. Correct income data are often more difficult to obtain because the richest households are more prompted to underreport their incomes. Therefore, the income inequality based on data from household surveys are likely to be underestimated.
+
+Another limitation lies in the lack of time-series data to be compared with the data sourced from 2016. This prevents a holistic observation in the change of socioeconomic dynamic in the neighbourhoods across time. The neghbourhoods may not be assigned to the same clusters based on data sourced from past years. Such shifts would provide insights that is not available in this study.
 
 ## Ethical Considerations
+Features such as race or income can be highly predictive for certain problems. The three variables in poverty, education, and visible minority population in this clustering analysis does not provide details of underlying contributors for the social division in the neighbourhoods. Without further investigation, the study possibley shapes the categories of perception and classification through which readers internalize social divisions. These categories shape the way we envision class structure and social problems associated with the neighbourhoods and paved the way for implicit stigmatization. More crucially, the incorporation of these categories structures decisions to buy property and, for parents, to send children to the local schools.
 
 # Clustering Toronto's Neighbourhoods by Feautures of Education, Income and Visible Minority Status
 
@@ -273,25 +275,15 @@ km.res <- kmeans(num_data, 2, nstart = 25)
 fviz_cluster(km.res, num_data,  geom = "point", 
              ellipse= FALSE, show.clust.cent = FALSE,
              palette = "jco", ggtheme = theme_classic())
-
-
 dbscan::kNNdistplot(num_data, k =  3)
 abline(h = .95, lty = 2)
-
-
 pred_dbscan <- fpc::dbscan(num_data, .95, 5)
 pred_dbscan
-
 fviz_cluster(pred_dbscan, num_data, geom = "point")
-
 ?kNN
-
 ```
 
-
-
-
-
-
+To be included in references:
+https://www.justice.gc.ca/eng/rp-pr/cj-jp/yj-jj/yj1-jj1/p1_6.html
+https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3901
 https://www.datanovia.com/en/lessons/dbscan-density-based-clustering-essentials/
-
