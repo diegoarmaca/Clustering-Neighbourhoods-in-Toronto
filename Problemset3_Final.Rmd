@@ -5,12 +5,13 @@ date: "29/02/2020"
 output:
   pdf_document: default
   html_document: default
-abstract: Abstract nnnnn nnnnnn
+abstract: "The City of Toronto consists of 140 neighbhourhoods. While each of the neighbourhood has its own strength and vitality, some neighbourhoods share similar socioeconomic traits. In this study, we intend to identify neighbourhoods that have disadvantaged socioeconomic status through a clustering analysis using hierachical clustering. Features of low-income rate, lack of education and racial diversity are employed to cluster the neighbourhoods into two groups. There are 34 neighbourhoods in group 1 while the other 106 are assigned to group 2. The 34 neighbourhoods in group 1 have higher percentage of population that have low-income status, possess no educational certification, and are visible minorities; the neighbourhoods in group 1 are seemed as more disadvantaged. The clusters of neighbourhoods are plotted as a choropleth map which allows us to examine the spatial relationship between disadvantaged the neighbourhoods. What we discover is that the disadvantaged the neighbourhoods not only share similar socioeconomic characteristics, but they are also geographically close to each other."
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 ```
+
 ```{r, echo=FALSE, include=FALSE}
 # Importing libraries
 library(opendatatoronto)
@@ -86,7 +87,7 @@ main_df <- filter(main_df_raw,
                       Topic == "Low income in 2015")
 ```
 
-```{r echo= FALSE, include = FALSE}
+```{r echo= FALSE, include = FALSE, linewidth=60}
 # Reshape the dataframe (swap row and columns)
 main_df_reshaped <- data.frame(t(main_df[-1]))
 colnames(main_df_reshaped) <- main_df[, 1]
@@ -104,12 +105,6 @@ main_df_sliced$total_population_aged_15_years_and_over_by_major_field_of_study_c
 main_df_sliced$x18_to_64_years_percent
 main_df_sliced = main_df_sliced[-1,]
 main_df_sliced <- mutate(main_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
-# Assign 0 as Toronto neighbourhood number
-main_df_sliced$neighbourhood_number <- 
-  as.numeric(as.character(main_df_sliced$neighbourhood_number)) 
-main_df_sliced$neighbourhood_number[is.na(main_df_sliced$neighbourhood_number)] <- 0 
-main_df_sliced$neighbourhood_number <- 
-  as.factor(main_df_sliced$neighbourhood_number)
 ```
 ```{r echo= FALSE, include=FALSE}
 # Select wanted columns to make a new dataframe
@@ -153,7 +148,7 @@ df_cleaned
 # Introduction
 There are 140 neighbourhoods officially recognized by the City of Toronto and the divisions are used for internal planning purposes. Many shorcomings of economic or social policy planning and making come from the over-reliance on “one-size-fits-all” approach that overlooks their differences in socioeconomic status. However, customizing policies for 140 neighbourhoods is also improbable. Can we then create groups of neighbourhoods that share similar socioeconomic traits so policy makers can plan strategically and efficiently? Can we identify the group of neighbourhoods that are vulnerable in their social and economic development so they receive more attention from the Government? In this study, a clustering analysis is conducted to be used to define neighborhood types and display their characteristics and geographic proximity.
 
-Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to our choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, population percentage of residents who have no educational certification, and visible minority population percentage. We intend to then articulate the social stratification and spatial stratification in the City of Toronto.
+Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to the  choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, population percentage of residents who have no educational certification, and visible minority population percentage. We intend to then articulate the social stratification and spatial stratification in the City of Toronto.
 
 # Dataset and Method Description
 
@@ -169,53 +164,40 @@ ggplot(df_cleaned) +
   aes(y = no_certificate_diploma_or_degree_2) +
   geom_boxplot() +
   labs(x = "", y = "No certificate (%)") -> p1
-
 ggplot(df_cleaned) +
   aes(x = 1:nrow(df_cleaned), y = x18_to_64_years_percent) +
   #geom_bar(stat="identity", width=1)  
   geom_boxplot() +
   labs(x = "", y = "Low Income (%)") -> p2
-
 ggplot(df_cleaned) +
   aes(y = total_visible_minority_population) +
   geom_boxplot() +
   labs(x = "", y = "Visible minority (%)") -> p3
   
-
-
 #tt2 <- ttheme_default(core=list(fg_params=list(hjust=.5, x=0.4)),
 #                      rowhead=list(fg_params=list(hjust=.5, x=0.4)))
-
 grid1 <- grid.arrange(p1, p2, p3, ncol = 1, nrow = 3)
-
 ```
 
 ```{r include=FALSE, message=FALSE, fig.height = 5, fig.width = 5, warning=FALSE}
 # Compute descriptive statistics
-
 tt1 <- ttheme_default()
-
 stats_table <- stat.desc(df_cleaned[,c(5:7)])
 stats_table <- round(stats_table, 2)
-
 stats_table <- mutate(stats_table, stats = row.names(stats_table))
 stats_table <- select(stats_table, stats, no_certificate_diploma_or_degree_2,
                       x18_to_64_years_percent, total_visible_minority_population)
-
-
 colnames(stats_table) <- c("stats","No certificate","Low Income","Visible minority")
-
 grid2 <- grid.arrange(tableGrob(stats_table, theme = tt1, rows = NULL), ncol = 1, nrow = 1)
 #kable(stats_table)
-
 ```
 ```{r include=TRUE}
 #grid.arrange(grid1, grid2, ncol = 2, nrow = 1, padding = 1, heights=c(2,3))
-
  grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
          arrangeGrob(grid2, ncol=1, nrow=1), heights=c(22,1), widths=c(1,3))
-
 ```
+
+Figure 1: Descriptive statistics of the data 
 
 ## Method
 
@@ -285,7 +267,7 @@ Features such as race or income can be highly predictive for certain problems. T
 # Hierarchical Clustering of Toronto's Neighbourhoods
 
 ## Calculating distance between observations (Neighbourhoods)
-Firstly, Euclidean Distance Between Toronto's Neighbourhoods is calculated and used to construct a dendrogram. The height of the branch points indicates how similar or different the neighbourhoods are from each other; the greater the height, the greater the difference. 
+Firstly, Euclidean Distance Between Toronto's Neighbourhoods is calculated and used to construct a dendrogram. The height of the branch points indicates how similar or different the neighbourhoods are from each other; the greater the height, the greater the difference.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 4, fig.width = 7, warning=FALSE}
 # Get the distance of the normalized data
@@ -296,7 +278,7 @@ plot_data_comp = hclust(distance)
 plot(plot_data_comp,labels=plot_data_comp$ID,main='Cluster Dendrogram', cex=.4)
 ```
 
-Figure x: Cluster dendrogram that illustrats Euclidean Distances between the neighbourhoods
+Figure 2: Cluster dendrogram that illustrats Euclidean Distances between the neighbourhoods
 
 ## Determine optimal number of clusters
 
@@ -309,14 +291,14 @@ for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
 plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
 ```
 
-Figure x: Scree plot that indicates the optimal nuber of clusters is 2
+Figure 3: Scree plot that indicates the optimal nuber of clusters is 2
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 4, fig.width = 7, warning=FALSE}
 plot(plot_data_comp,hang=-1, cex=.4)
 rect.hclust(plot_data_comp, k = 2, border = "red")
 ```
 
-Figure x: Grouping neghbourhoods into two clusters
+Figure 4: Grouping neghbourhoods into two clusters
 
 ## Assessing Characteristics of Neighbourhood Clusters
 The two clusters have different numbers of members. In Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table x. showcases the distances between the means of the two clusters in normalized data values. The distinction between the two clusters is clear—all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicate its characteristics in higher percentage in poverty, lack of education and visibile minority population.
@@ -327,7 +309,7 @@ member = cutree(plot_data_comp,2)
 kable(table(member))
 ```
 
-Table x: Cluster membership
+Table 1: Cluster membership
 
 ```{r echo=FALSE, include=TRUE}
 member_df <- as.data.frame(member)
@@ -335,7 +317,7 @@ variables_df <- aggregate(nor,list(member),mean)
 kable(variables_df)
 ```
 
-Table x: Cluster mean distance in normalized data values
+Table 2: Cluster mean distance in normalized data values
 
 ## Clusters Distribution
 The grouped scattor plots show that there is a pattern of neighbourhoods distribution with the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which the position visualizes their characteristics in higher percentage in poverty, lack of education and visibile minority population.
@@ -361,7 +343,7 @@ legend(legend = unique(merged_df$hcluster),
        "bottomright", cex = .8)
 ```
 
-Figure x: Grouped scatter plots 
+Figure 5: Grouped scatter plots 
 
 ```{r echo=FALSE}
 group1 <- df_selected_columns %>% filter(hcluster == "1")
@@ -376,16 +358,16 @@ group2 <- summary(group2)
 kable(group2)
 ```
 ```{r echo=FALSE, message=FALSE, fig.height = 3, fig.width = 9, warning=FALSE, fig.align='center'}
-
-group1_grob <- grid.arrange(tableGrob(group1, theme = tt1, rows = NULL), ncol = 1, nrow = 1, bottom = "Table x: Summary table of Group 1")
-
-group2_grob <- grid.arrange(tableGrob(group2, theme = tt1, rows = NULL), ncol = 1, nrow = 1, bottom = "Table x: Summary table of Group 2")
+group1_grob <- grid.arrange(tableGrob(group1, theme = tt1, rows = NULL), 
+                            ncol = 1, nrow = 1, 
+                            bottom = "Table 3: Summary table of Group 1")
+group2_grob <- grid.arrange(tableGrob(group2, theme = tt1, rows = NULL), 
+                            ncol = 1, nrow = 1, 
+                            bottom = "Table 4: Summary table of Group 2")
 ```
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3, fig.width = 9, warning=FALSE, fig.align='center'}
-
-
- grid.arrange(arrangeGrob(group1_grob,  ncol=1, nrow=1, name = "title"), arrangeGrob(group2_grob, ncol=1, nrow=1), heights=c(4,1), widths=c(1,1))
-
+ grid.arrange(arrangeGrob(group1_grob,  ncol=1, nrow=1, name = "title"), 
+              arrangeGrob(group2_grob, ncol=1, nrow=1), heights=c(4,1), widths=c(1,1))
 ```
 
 
@@ -406,7 +388,7 @@ tm_layout(legend.show = TRUE, legend.position =
   tm_facets(sync = TRUE, ncol = 1)
 ```
 
-Figure x: Map of clustered neighbourhood
+Figure 6: Map of clustered neighbourhood
 
 
 \pagebreak
