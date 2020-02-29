@@ -389,8 +389,6 @@ group2_grob <- grid.arrange(tableGrob(group2, theme = tt1, rows = NULL), ncol = 
 ```
 
 
-Table x: Summary table of Group 1           Table x: Summary table of Group 2
-
 ## Toronto's Neighbourhoods Clusters Map
 
 The map shows the distribution of neighbourhoods in the two clusters. We can see that the neighbourhoods in Group 1 not only share similar socieconomic traits, they are also geographically close to each other and are located in the peripheral areas of the city.
