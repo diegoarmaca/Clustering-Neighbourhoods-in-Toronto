@@ -32,7 +32,8 @@ library(factoextra)
 ```{r include=FALSE}
 #setwd("~/Desktop/MI/INF2178 Experienment DS/Problem set 3")
 # Get the resource we want from this package
-neighbourhood_raw <- list_package_resources("6e19a90f-971c-46b3-852c-0c48c436d1fc") %>% 
+neighbourhood_raw <- 
+  list_package_resources("6e19a90f-971c-46b3-852c-0c48c436d1fc") %>% 
   filter(name == "neighbourhood-profiles-2016-csv") %>% 
   get_resource()
 main_df_raw <- neighbourhood_raw
@@ -46,19 +47,23 @@ package <- show_package("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
 package
 # get all resources for this package
 resources <- list_package_resources("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
-# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+# identify datastore resources; by default, Toronto Open Data sets datastore 
+# resource format to CSV for non-geospatial and GeoJSON for geospatial resources
 datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
 # load the first datastore resource as a sample
 geo_data <- filter(datastore_resources, row_number()==1) %>% get_resource()
 ### Cleaning geo-location dataset
 clean_geo_data <- janitor::clean_names(geo_data)
-clean_geo_data <- extract(clean_geo_data, area_name, into = "neighbourhoods" , regex = "([^(0-9)]+)")
+clean_geo_data <- extract(clean_geo_data, area_name, 
+                          into = "neighbourhoods" , 
+                          regex = "([^(0-9)]+)")
 clean_geo_data["neighbourhoods"] <- 
   janitor::make_clean_names(as.matrix(clean_geo_data["neighbourhoods"]))
 clean_geo_data <- janitor::clean_names(clean_geo_data)
 clean_geo_data <- select(clean_geo_data, neighbourhoods, longitude, latitude, geometry)
 filter(clean_geo_data, neighbourhoods %in% c("mimico","weston_pellam_park"))
-clean_geo_data["neighbourhoods"][c(17,67),] <- c("mimico_includes_humber_bay_shores","weston_pelham_park")
+clean_geo_data["neighbourhoods"][c(17,67),] <- 
+  c("mimico_includes_humber_bay_shores","weston_pelham_park")
 clean_geo_data
 ```
 
@@ -98,9 +103,11 @@ main_df_sliced$x18_to_64_years_percent
 main_df_sliced = main_df_sliced[-1,]
 main_df_sliced <- mutate(main_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
 # Assign 0 as Toronto neighbourhood number
-main_df_sliced$neighbourhood_number <- as.numeric(as.character(main_df_sliced$neighbourhood_number)) 
+main_df_sliced$neighbourhood_number <- 
+  as.numeric(as.character(main_df_sliced$neighbourhood_number)) 
 main_df_sliced$neighbourhood_number[is.na(main_df_sliced$neighbourhood_number)] <- 0 
-main_df_sliced$neighbourhood_number <- as.factor(main_df_sliced$neighbourhood_number)
+main_df_sliced$neighbourhood_number <- 
+  as.factor(main_df_sliced$neighbourhood_number)
 ```
 ```{r echo= FALSE, include=FALSE}
 # Select wanted columns to make a new dataframe
@@ -120,14 +127,17 @@ df_cleaned <- main_df_sliced %>%
     "total_visible_minority_population"
   )
 # transform df to numeric
-df_cleaned$population_2016 = as.numeric(gsub(",", "", df_cleaned$population_2016))
-df_cleaned$total_visible_minority_population = as.numeric(gsub(",", "", df_cleaned$total_visible_minority_population))
+df_cleaned$population_2016 = 
+  as.numeric(gsub(",", "", df_cleaned$population_2016))
+df_cleaned$total_visible_minority_population = 
+  as.numeric(gsub(",", "", df_cleaned$total_visible_minority_population))
 df_cleaned
 ```
 
 ``` {r echo= FALSE, include=FALSE}
 ## Turn absolute values to percentage
-total_population_education <- df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
+total_population_education <- 
+  df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
 # Education data transformation
 df_cleaned <- 
   mutate(df_cleaned, no_certificate_diploma_or_degree_2 =
@@ -140,7 +150,8 @@ df_cleaned
   
 ###draw correlation matrix of the numeric independent variables only
 num_data <- df_cleaned[,-c(1:2)] ### only numeric independent vars
-colnames(num_data) <- c("population","total_highest_cert","no_certificate","18_to_64_per","visible_minority")
+colnames(num_data) <- c("population","total_highest_cert",
+                        "no_certificate","18_to_64_per","visible_minority")
 correlationMatrix <- cor(num_data, method = "pearson") 
 correlationMatrix    # a 6x6 matrix   
 col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
@@ -155,15 +166,18 @@ corrplot(correlationMatrix, method="color", col=col(200),
 ```
 
 ```{r echo= FALSE, include=FALSE}
+# Remame columns
+df_cleaned <- rename(df_cleaned, 
+    no_certificate = no_certificate_diploma_or_degree_2,
+    low_income = x18_to_64_years_percent,
+    visible_minority = total_visible_minority_population
+    )
+
 # Normalize data by subtracting the mean and dividing it by the standard deviation.
 df_selected_columns = df_cleaned[,c(
-  # Education
-   "no_certificate_diploma_or_degree_2",
-  # Low income
-   "x18_to_64_years_percent", # low income
-  
-  # Visible minority
-   "total_visible_minority_population"
+   "no_certificate",
+   "low_income",
+   "visible_minority"
   )]
 means = apply(df_selected_columns,2,mean)
 sds = apply(df_selected_columns,2,sd)
@@ -185,11 +199,18 @@ corrplot(correlationMatrix, method="color", col=col(200),
 )
 ```
 # Introduction
-There are 140 neighbourhoods officially recognized by the City of Toronto and the divisions are used for internal planning purposes. Many shorcomings of economic or social policy planning and making come from the over-reliance on “one-size-fits-all” approach that overlooks their differences in socioeconomic status. However, customizing policies for 140 neighbourhoods is also improbable. Can we then create groups of neighbourhoods that share similar socioeconomic traits so policy makers can plan strategically and efficiently? Can we identify the group of neighbourhoods that are vulnerable in their social and economic development so they receive more attention from the Government? In this study, a clustering analysis is conducted to be used to define neighborhood types and display their characteristics and spatial patterns.
+There are 140 neighbourhoods officially recognized by the City of Toronto and the divisions are used for internal planning purposes. Many shorcomings of economic or social policy planning and making come from the over-reliance on “one-size-fits-all” approach that overlooks their differences in socioeconomic status. However, customizing policies for 140 neighbourhoods is also improbable. Can we then create groups of neighbourhoods that share similar socioeconomic traits so policy makers can plan strategically and efficiently? Can we identify the group of neighbourhoods that are vulnerable in their social and economic development so they receive more attention from the Government? In this study, a clustering analysis is conducted to be used to define neighborhood types and display their characteristics and geographic proximity.
 
-Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to our choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, population percentage of residents who have no education certificate, and visible minority population percentage. We intend to then articulate the social stratification and spatial stratification in the City of Toronto.
+Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to our choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, population percentage of residents who have no educational certification, and visible minority population percentage. We intend to then articulate the social stratification and spatial stratification in the City of Toronto.
 
 # Dataset and Method Description
+To address the research question, the city of Toronto, through its portal Open Toronto Data, offers a comprehensive dataset called Neighbourhood Profiles. It contains several categories divided by topics, that in turn, are broken down into different characteristics, all presented in a total of 2383 rows. As for the neighborhoods, all of them are displayed as columns. For this analysis, the variables "no certificate, diploma, or degree 2", "18 to 64 years %", and "total visible minority population" will feed into the model to answer the research question. The variables are renamed to "no certificate", "visible minority", and "low income".
+
+Descriptive statistics about the variables are shown in the figure 1 and table1.
+
+Expose the most vulnerable neighborhoods in the city of Toronto is a classification case. The goal is to group all of them by sets based on how similar they are. To achieve this, the classification method to be used will be clustering, an unsupervised machine learning technique that partitions a set of objects with similar characteristics into subsets.
+
+Different approaches were analyzed. clustering techniques such as K-means, Density-based classification, and Hierarchical clustering were tested out with the dataset, finding the last one the most suitable for this investigation. Hierarchical clustering allows to view at once, each possible number of clusters through the dendrogram, which is a tree representation of those clusters. Moreover, the hierarchical method needs no k in advance, which is the number of groups to create. It is important in this study because the objective is to find the most vulnerable neighborhoods without any preference. Lastly, by using the elbow curve, the best number of clusters (k) can be impartially calculated.
 
 ## Limitation of the Dataset and Approach
 In 2016, the long form Census became mandatory once again, and was distributed to one out of every four households (25%). Income data were gathered solely by linking with administrative data (Canada Revenue Agency). Census data is subject to error such as coverage, non-response, and sampling errors. Moreover, althought the Census is mandatory, it is still likely to be affected by Response Bias because people do not always provide accurate or truthful information. This is especially common in collection of income data. Correct income data are often more difficult to obtain because the richest households are more prompted to underreport their incomes. Therefore, the income inequality based on data from household surveys are likely to be underestimated.
@@ -210,8 +231,10 @@ distance = dist(nor)
 plot_data <- nor
 # Hierarchical agglomerative clustering using default complete linkage 
 plot_data_comp = hclust(distance)
-plot(plot_data_comp,labels=plot_data_comp$ID,main='Default from hclust', cex=.4)
+plot(plot_data_comp,labels=plot_data_comp$ID,main='Cluster Dendrogram', cex=.4)
 ```
+
+Figure x: Cluster dendrogram that illustrats Euclidean Distances between the neighbourhoods
 
 ## Determine optimal number of clusters
 
@@ -224,24 +247,36 @@ for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
 plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
 ```
 
-## Assessing Characteristics of Neighbourhood Clusters
-The two clusters has different numbers of members. In Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table x. showcases the distances between the means of the two clusters with normalized data values. The distinction between the two clusters is clear—all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicates its characteristics in higher percentage in poverty, lack of education and visibile minority population.
+Figure x: Scree plot that indicates the optimal nuber of clusters is 2
 
-``` {r echo=FALSE}
-# Characterizing clusters 
-member = cutree(plot_data_comp,2)
-table(member)
-member_df <- as.data.frame(member)
-variables_df <- aggregate(nor,list(member),mean)
-variables_df
-```
-```{r echo=FALSE, include=FALSE}
+```{r echo=FALSE}
 plot(plot_data_comp,hang=-1, cex=.4)
 rect.hclust(plot_data_comp, k = 2, border = "red")
 ```
 
+Figure x: Grouping neghbourhoods into two clusters
+
+## Assessing Characteristics of Neighbourhood Clusters
+The two clusters have different numbers of members. In Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table x. showcases the distances between the means of the two clusters in normalized data values. The distinction between the two clusters is clear—all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicate its characteristics in higher percentage in poverty, lack of education and visibile minority population.
+
+``` {r echo=FALSE}
+# Characterizing clusters 
+member = cutree(plot_data_comp,2)
+kable(table(member))
+```
+
+Table x: Cluster membership
+
+``` {r echo=FALSE}
+member_df <- as.data.frame(member)
+variables_df <- aggregate(nor,list(member),mean)
+kable(variables_df)
+```
+
+Table x: Cluster mean distance in normalized data values
+
 ## Clusters Distribution
-The grouped scattor plots shows that there is a pattern of neighbourhood distribution within the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which visualizes its characteristics in higher percentage in poverty, lack of education and visibile minority population.
+The grouped scattor plots show that there is a pattern of neighbourhoods distribution with the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which the position visualizes their characteristics in higher percentage in poverty, lack of education and visibile minority population.
 
 ```{r echo=FALSE}
 #get hclust label to neighbourhoods
@@ -258,42 +293,104 @@ colors <- c("#00AFBB", "#E7B800", "#FC4E07", "#000000")
 colors <- colors[merged_df$hcluster]
 plot(df_selected_columns, col = colors)
 par(xpd=TRUE)
-legend(legend = unique(merged_df$hcluster), col =unique(colors), pch = 19, bty = "o", "bottomright", cex = .8)
-# how to label the clusters
-# label the data entries(cluster number)
-# going back from distrance to real values
+legend(legend = unique(merged_df$hcluster), 
+       col =unique(colors), 
+       pch = 19, bty = "o", 
+       "bottomright", cex = .8)
 ```
+
+Figure x: Grouped scatter plots 
+
+```{r echo=FALSE}
+group1 <- df_selected_columns %>% filter(hcluster == "1")
+kable(summary(group1))
+```
+
+Table x: Summary table of Group 1
+
+```{r echo=FALSE}
+group2 <- df_selected_columns %>% filter(hcluster == "2")
+kable(summary(group2))
+```
+
+Table x: Summary table of Group 2
 
 ## Toronto's Neighbourhoods Clusters Map
 
-Through the visualization of a map, we can see that the neighbourhoods in Group 1 not only share similar socieconomic traits, they are also geographically close to each other. The geographic proximity of the vulnerable neighbourhoods [to be continued...] 
+The map shows the distribution of neighbourhoods in the two clusters. We can see that the neighbourhoods in Group 1 not only share similar socieconomic traits, they are also geographically close to each other and are located in the peripheral areas of the city.
 
 ```{r echo=FALSE}
 #Plot all majors without palette
 tmap_mode("plot")
 tm_shape(sf_merged_df) +
-tm_layout(legend.show = TRUE, legend.position = c("right", "bottom"), title.size = 2, title.position = c("center","center")) +
+tm_layout(legend.show = TRUE, legend.position = 
+            c("right", "bottom"), title.size = 2, 
+          title.position = c("center","center")) +
   tm_polygons(c("hcluster"), style = "pretty") +
-  tm_text("neighbourhood_number", auto.placement = TRUE, xmod = 0, size = 0.3)+
+  tm_text("neighbourhood_number", 
+          auto.placement = TRUE, xmod = 0, size = 0.3)+
   tm_facets(sync = TRUE, ncol = 1)
 ```
 
+Figure x: Map of clustered neighbourhood
 
-```{r}
-set.seed(123)
-km.res <- kmeans(num_data, 2, nstart = 25)
-fviz_cluster(km.res, num_data,  geom = "point", 
-             ellipse= FALSE, show.clust.cent = FALSE,
-             palette = "jco", ggtheme = theme_classic())
-dbscan::kNNdistplot(num_data, k =  3)
-abline(h = .95, lty = 2)
-pred_dbscan <- fpc::dbscan(num_data, .95, 5)
-pred_dbscan
-fviz_cluster(pred_dbscan, num_data, geom = "point")
-?kNN
+
+\pagebreak
+# Appendix A
+```{r ref.label=knitr::all_labels(), echo = T, eval = F, tidy=TRUE, tidy.opts=list(width.cutoff=60), results='asis'}
 ```
 
-To be included in references:
-https://www.justice.gc.ca/eng/rp-pr/cj-jp/yj-jj/yj1-jj1/p1_6.html
-https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3901
-https://www.datanovia.com/en/lessons/dbscan-density-based-clustering-essentials/
+\pagebreak
+# References
+
+DBSCAN: Density-Based Clustering Essentials. (n.d.). Retrieved February 27, 2020, from https://www.datanovia.com/en/lessons/dbscan-density-based-clustering-essentials/
+
+Department of Justice, & Research and Statistics Division. (2015, January 7). A One-Day Snapshot of Aboriginal Youth in Custody Across Canada. Retrieved February 27, 2020, from https://www.justice.gc.ca/eng/rp-pr/cj-jp/yj-jj/yj1-jj1/p1_6.html
+
+Open Data Dataset. (n.d.). Retrieved January 30, 2020, from https://open.toronto.ca/dataset/
+wellbeing-toronto-demographics-nhs-indicators/
+
+R Core Team (2019). R: A language and environment for statistical computing. R
+Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+
+H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+Sharla Gelfand (2019). opendatatoronto: Access the City of Toronto Open Data Portal. R
+package version 0.1.1. https://CRAN.R-project.org/package=opendatatoronto
+  
+Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2019). dplyr: A Grammar
+of Data Manipulation. R package version 0.8.3. https://CRAN.R-project.org/package=dplyr
+
+Hadley Wickham and Lionel Henry (2019). tidyr: Tidy Messy Data. R package version 1.0.0.
+https://CRAN.R-project.org/package=tidyr
+
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software,
+4(43), 1686, https://doi.org/10.21105/joss.01686
+
+Yihui Xie (2019). knitr: A General-Purpose Package for Dynamic Report Generation in R. R
+package version 1.25.
+
+Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and Hall/CRC.
+ISBN 978-1498716963
+
+Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible Research in R. In Victoria
+Stodden, Friedrich Leisch and Roger D. Peng, editors, Implementing Reproducible
+
+Matt Dowle and Arun Srinivasan (2019). data.table: Extension of `data.frame`. R package
+version 1.12.6. https://CRAN.R-project.org/package=data.table
+Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
+
+Pebesma, E., 2018. Simple Features for R: Standardized Support for Spatial Vector Data.
+The R Journal 10 (1), 439-446, https://doi.org/10.32614/RJ-2018-009
+
+Statistics Canada. (2019, May 1). Census of Population. Retrieved February 27, 2020, from https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3901
+
+Tennekes M (2018). “tmap: Thematic Maps in R.” _Journal of Statistical Software_, *84*(6),
+1-39. doi: 10.18637/jss.v084.i06 (URL: https://doi.org/10.18637/jss.v084.i06).
+
+Martijn Tennekes (2019). tmaptools: Thematic Map Tools. R package version 2.0-2.
+https://CRAN.R-project.org/package=tmaptools
+
+Joe Cheng, Bhaskar Karambelkar and Yihui Xie (2019). leaflet: Create Interactive Web
+Maps with the JavaScript 'Leaflet' Library. R package version 2.0.3.
+https://CRAN.R-project.org/package=leaflet
