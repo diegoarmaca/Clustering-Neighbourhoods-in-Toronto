@@ -199,12 +199,13 @@ Another limitation lies in the lack of time-series data to be compared with the 
 ## Ethical Considerations
 Features such as race or income can be highly predictive for certain problems. The three variables in poverty, education, and visible minority population in this clustering analysis does not provide details of underlying contributors for the social division in the neighbourhoods. Without further investigation, the study possibley shapes the categories of perception and classification through which readers internalize social divisions. These categories shape the way we envision class structure and social problems associated with the neighbourhoods and paved the way for implicit stigmatization. More crucially, the incorporation of these categories structures decisions to buy property and, for parents, to send children to the local schools.
 
-# Clustering Toronto's Neighbourhoods by Feautures of Education, Income and Visible Minority Status
+# Hierarchical Clustering of Toronto's Neighbourhoods
 
-## Euclidean Distance Between Toronto's Neighbourhoods
+## Calculating distance between observations (Neighbourhoods)
+Firstly, Euclidean Distance Between Toronto's Neighbourhoods is calculated and used to construct a dendrogram. The height of the branch points indicates how similar or different the neighbourhoods are from each other; the greater the height, the greater the difference. 
 
 ```{r echo=FALSE}
-# Get the distance ot the normalized data
+# Get the distance of the normalized data
 distance = dist(nor)
 plot_data <- nor
 # Hierarchical agglomerative clustering using default complete linkage 
@@ -214,6 +215,8 @@ plot(plot_data_comp,labels=plot_data_comp$ID,main='Default from hclust', cex=.4)
 
 ## Determine optimal number of clusters
 
+The Elbow Method is used to determine the optimal number of clusters. Viewing the Scree Plot (Figure X), the "elbow" on the arm is "2" on the x-axis. Therefore, the neighbourhoods will be assigned to two different clusters.
+
 ```{r echo=FALSE}
 # Scree Plot
 wss <- (nrow(nor)-1)*sum(apply(nor,2,var))
@@ -221,19 +224,24 @@ for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
 plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
 ```
 
-## Assessing Characteristics of Neighbourhoods
+## Assessing Characteristics of Neighbourhood Clusters
+The two clusters has different numbers of members. In Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table x. showcases the distances between the means of the two clusters with normalized data values. The distinction between the two clusters is clear—all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicates its characteristics in higher percentage in poverty, lack of education and visibile minority population.
 
 ``` {r echo=FALSE}
 # Characterizing clusters 
-member_comp = cutree(plot_data_comp,2)
-aggregate(nor,list(member_comp),mean)
+member = cutree(plot_data_comp,2)
+table(member)
+member_df <- as.data.frame(member)
+variables_df <- aggregate(nor,list(member),mean)
+variables_df
 ```
-```{r echo=FALSE}
+```{r echo=FALSE, include=FALSE}
 plot(plot_data_comp,hang=-1, cex=.4)
 rect.hclust(plot_data_comp, k = 2, border = "red")
 ```
 
 ## Clusters Distribution
+The grouped scattor plots shows that there is a pattern of neighbourhood distribution within the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which visualizes its characteristics in higher percentage in poverty, lack of education and visibile minority population.
 
 ```{r echo=FALSE}
 #get hclust label to neighbourhoods
@@ -257,6 +265,8 @@ legend(legend = unique(merged_df$hcluster), col =unique(colors), pch = 19, bty =
 ```
 
 ## Toronto's Neighbourhoods Clusters Map
+
+Through the visualization of a map, we can see that the neighbourhoods in Group 1 not only share similar socieconomic traits, they are also geographically close to each other. The geographic proximity of the vulnerable neighbourhoods [to be continued...] 
 
 ```{r echo=FALSE}
 #Plot all majors without palette
