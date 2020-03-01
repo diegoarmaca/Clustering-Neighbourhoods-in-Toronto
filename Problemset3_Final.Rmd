@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = FALSE, include = FALSE)
 ```
 
 ```{r, echo=FALSE, include=FALSE}
+
 # Importing libraries
 library(opendatatoronto)
 library(dplyr)
@@ -28,12 +29,12 @@ library(car)
 library(dbscan) # For density-based model
 library(fpc) # For dessity-based model
 library(factoextra)
-library(gridExtra)
-library(pastecs)
+library(gridExtra) # For grid manipulation of tables and graphs
+library(pastecs) # For summary statistics
 ```
 
 ```{r include=FALSE}
-#setwd("~/Desktop/MI/INF2178 Experienment DS/Problem set 3")
+
 # Get the resource we want from this package
 neighbourhood_raw <- 
   list_package_resources("6e19a90f-971c-46b3-852c-0c48c436d1fc") %>% 
@@ -44,17 +45,22 @@ main_df_raw <- as.data.frame(main_df_raw)
 # Remove "X2011 prefix from all column names"
 ```
 ```{r include=FALSE}
+
 ### GEO-LOCATION DATASET TORONTO BY NEIGHBOURHOODS ###
 # get package
 package <- show_package("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
 package
+
 # get all resources for this package
 resources <- list_package_resources("4def3f65-2a65-4a4f-83c4-b2a4aed72d46")
+
 # identify datastore resources; by default, Toronto Open Data sets datastore 
 # resource format to CSV for non-geospatial and GeoJSON for geospatial resources
 datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+
 # load the first datastore resource as a sample
 geo_data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+
 ### Cleaning geo-location dataset
 clean_geo_data <- janitor::clean_names(geo_data)
 clean_geo_data <- tidyr::extract(clean_geo_data, area_name, 
@@ -71,11 +77,13 @@ clean_geo_data
 ```
 
 ```{r echo=FALSE, include=FALSE}
+
 #Save neighbourhoods into a dataframe
 col_names_2011 <- as.data.frame(colnames(main_df_raw))
 col_names_2011 <- col_names_2011[7:nrow(col_names_2011),]
 col_names_2011 <- as.data.frame(col_names_2011)
 colnames(col_names_2011) <- "neighbourhoods"
+
 #Filter education per neighbourhood
 main_df <- filter(main_df_raw, 
                       Category == "Neighbourhood Information" | 
@@ -88,16 +96,20 @@ main_df <- filter(main_df_raw,
 ```
 
 ```{r echo= FALSE, include = FALSE, linewidth=60, width.cutoff=60}
+
 # Reshape the dataframe (swap row and columns)
 main_df_reshaped <- data.frame(t(main_df[-1]))
 colnames(main_df_reshaped) <- main_df[, 1]
+
 # Slice the reshaped dataframe
 main_df_sliced <- main_df_reshaped %>%
   dplyr::slice(4:nrow(main_df_reshaped))
+
 # Turn characteristics to column names
 names(main_df_sliced) <- as.matrix(main_df_sliced[1, ])
 main_df_sliced <- main_df_sliced[-1, ]
 main_df_sliced[] <- lapply(main_df_sliced, function(x) type.convert(as.character(x)))
+
 # Clean column names
 library(janitor)
 main_df_sliced <- main_df_sliced %>% clean_names()
@@ -107,6 +119,7 @@ main_df_sliced = main_df_sliced[-1,]
 main_df_sliced <- mutate(main_df_sliced, neighbourhoods = col_names_2011$neighbourhoods)
 ```
 ```{r echo= FALSE, include=FALSE}
+
 # Select wanted columns to make a new dataframe
 df_cleaned <- main_df_sliced %>%
   select(
@@ -123,6 +136,7 @@ df_cleaned <- main_df_sliced %>%
     # visible minority
     "total_visible_minority_population"
   )
+
 # transform df to numeric
 df_cleaned$population_2016 = 
   as.numeric(gsub(",", "", df_cleaned$population_2016))
@@ -132,13 +146,16 @@ df_cleaned
 ```
 
 ``` {r echo= FALSE, include=FALSE, width.cutoff=60}
+
 ## Turn absolute values to percentage
 total_population_education <- 
   df_cleaned$total_highest_certificate_diploma_or_degree_for_the_population_aged_25_to_64_years_in_private_households_25_percent_sample_data
+
 # Education data transformation
 df_cleaned <- 
   mutate(df_cleaned, no_certificate_diploma_or_degree_2 =
            (df_cleaned$no_certificate_diploma_or_degree_2/total_population_education)*100)
+
 # Visible miniority data transformation
 df_cleaned <- 
   mutate(df_cleaned, total_visible_minority_population =
@@ -157,7 +174,8 @@ To address the research question, the City of Toronto, through the Open Toronto 
 
 
 ```{r include=FALSE, message=FALSE, fig.height = 5, fig.width = 1, warning=FALSE} 
-# Compute descriptive statistics boxplots
+
+# Compute descriptive statistics - boxplots
 ggplot(df_cleaned) +
   aes(y = no_certificate_diploma_or_degree_2) +
   geom_boxplot() +
@@ -174,7 +192,8 @@ grid1 <- grid.arrange(p1, p2, p3, ncol = 1, nrow = 3)
 ```
 
 ```{r include=FALSE, message=FALSE, fig.height = 5, fig.width = 5, warning=FALSE}
-# Compute descriptive statistics
+
+# Compute descriptive statistics - table
 tt1 <- ttheme_default()
 stats_table <- stat.desc(df_cleaned[,c(5:7)])
 stats_table <- round(stats_table, 2)
@@ -185,7 +204,9 @@ colnames(stats_table) <- c("stats","No certificate","Low Income","Visible minori
 grid2 <- grid.arrange(tableGrob(stats_table, theme = tt1, rows = NULL), ncol = 1, nrow = 1)
 ```
 ```{r include=TRUE}
- grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
+
+# Join the boxplots and the table 
+grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
          arrangeGrob(grid2, ncol=1, nrow=1), heights=c(28,1), widths=c(1,3), 
          bottom = "Figure 1: Descriptive statistics of the data")
 ```
@@ -195,6 +216,7 @@ Exposing the most disadvantaged neighbourhoods in the City of Toronto is a class
 
 Different approaches were analyzed. Clustering techniques such as K-means, Density-based classification, and Hierarchical clustering were tested out with the dataset, finding the last one the most suitable for this investigation. Hierarchical clustering allows us to view at once, each possible number of clusters (k) through the dendrogram, which is a tree representation of those clusters. Moreover, the hierarchical method needs no k in advance. The undetermination of k is important because the purpose of this study is to find the most disadvantaged neighbourhoods without pre-assumption on the number of groups there should be. Lastly, by using the Elbow curve, the best number of clusters (k) can be impartially calculated.
 ```{r}
+
 ###draw correlation matrix of the numeric independent variables only
 num_data <- df_cleaned[,-c(1:2)] ### only numeric independent vars
 colnames(num_data) <- c("population","total_highest_cert",
@@ -208,17 +230,17 @@ corrplot(correlationMatrix, method="color", col=col(200),
          # Combine with significance
          sig.level = 0.01, 
          # hide correlation coefficient on the principal diagonal
-         diag=FALSE
-)
+         diag=FALSE)
 ```
 
 ```{r echo= FALSE, include=FALSE}
+
 # Rename columns
 df_cleaned <- rename(df_cleaned, 
     no_certificate = no_certificate_diploma_or_degree_2,
     low_income = x18_to_64_years_percent,
-    visible_minority = total_visible_minority_population
-    )
+    visible_minority = total_visible_minority_population)
+
 # Normalize data by subtracting the mean and dividing it by the standard deviation.
 df_selected_columns = df_cleaned[,c(
    "no_certificate",
@@ -229,6 +251,7 @@ means = apply(df_selected_columns,2,mean)
 sds = apply(df_selected_columns,2,sd)
 nor = scale(df_selected_columns,means,sds)
 nor
+
 ###draw correlation matrix of the numeric variables only
 num_data <- as.data.frame(nor) ### only numeric independent vars
 colnames(num_data) <- c("no_certificate","18_to_64_per","visible_minority")
@@ -261,9 +284,11 @@ Features such as race or income can be highly predictive for certain problems. T
 Firstly, Euclidean Distance Between Toronto's neighbourhoods is calculated and used to construct a dendrogram, shown in Figure 2. The height of the branch points indicates how similar or different the neighbourhoods are from each other; the greater the height, the greater the difference.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3, fig.width = 7, warning=FALSE}
+
 # Get the distance of the normalized data
 distance = dist(nor)
 plot_data <- nor
+
 # Hierarchical agglomerative clustering using default complete linkage 
 plot_data_comp = hclust(distance)
 plot(plot_data_comp,labels=plot_data_comp$ID,main='Cluster Dendrogram', cex=.4)
@@ -275,7 +300,8 @@ Figure 2: Cluster dendrogram that illustrats Euclidean Distances between the nei
 The Elbow Method is used to determine the optimal number of clusters. Viewing the Scree Plot shown in Figure 3, the "elbow" on the arm is "2" on the x-axis. Therefore, the neighbourhoods will be assigned to two different clusters. In Figure 4, the neighbourhoods are grouped in the cluster dendrogram by the red rectangles.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3, fig.width = 7, warning=FALSE}
-# Scree Plot
+
+# Scree Plot fot the elbow curve
 wss <- (nrow(nor)-1)*sum(apply(nor,2,var))
 for (i in 2:20) wss[i] <- sum(kmeans(nor, centers=i)$withinss)
 plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
@@ -284,6 +310,8 @@ plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of 
 Figure 3: Scree plot that indicates the optimal nuber of clusters is 2
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3, fig.width = 7, warning=FALSE}
+
+#Plot dendrogram indicating the two optimal clusters
 plot(plot_data_comp,hang=-1, cex=.4)
 rect.hclust(plot_data_comp, k = 2, border = "red")
 ```
@@ -294,7 +322,8 @@ Figure 4: Grouping neghbourhoods into two clusters
 The two clusters have different numbers of members. As shown in Table 1, in Group 1, there are 34 neighbourhoods while the other 106 are assigned to Group 2. Table 2 showcases the distances between the means of the two clusters in normalized data values. The distinction between the two clusters is clear. As shown in Table 2, all values in Group 1 are positive and all values in Group 2 are all negative. The positive values in Group 1 indicate its characteristics in higher percentage in poverty, lack of education and visibile minority population.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 1.5, fig.width = 5, warning=FALSE, fig.align='center'}
-# Characterizing clusters 
+
+#Plot Characterized clusters 
 member <- cutree(plot_data_comp,2)
 freq_df <- table(member)
 freq_df <- data.frame(freq_df)
@@ -305,6 +334,8 @@ group1_grob <- grid.arrange(tableGrob(freq_df, theme = tt1, rows = NULL),
 
 
 ```{r echo=FALSE, include=TRUE,message=FALSE, fig.height = 1.5, fig.width = 7, warning=FALSE, fig.align='center'}
+
+#Plot Cluster mean distance in normalized data values
 member_df <- as.data.frame(member)
 variables_df <- aggregate(nor,list(member),mean)
 variables_df <- round(variables_df,3)
@@ -317,11 +348,13 @@ group1_grob <- grid.arrange(tableGrob(variables_df, theme = tt1, rows = NULL),
 The grouped scattor plots in Figure 5 show that there is a pattern of neighbourhoods distribution with the three selected variables. In general, the 34 neighbourhoods in Group 1 are located at the top-right area of the graphs, which the position visualizes their characteristics in higher percentage in poverty, lack of education and visibile minority population. The exact differences in the two groups can be assessed in the summary tables of the two clusters in Table 3 and Table 4.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3.5, fig.width = 7, warning=FALSE}
-#get hclust label to neighbourhoods
+
+#Get hclust label to neighbourhoods
 hcluster <- cutree(plot_data_comp, k=2)
 hcluster <- as.data.frame(hcluster)
 df_w_vector <- mutate(df_cleaned, hcluster = hcluster$hcluster)
-#merge dataset with geo dataset
+
+#Merge dataset with geo dataset
 df_w_vector["neighbourhoods"] <- 
   janitor::make_clean_names(as.matrix(df_w_vector["neighbourhoods"]))
 merged_df <- merge(df_w_vector, clean_geo_data, by = 'neighbourhoods')
@@ -341,6 +374,8 @@ legend(.35, .1, horiz = TRUE,
 Figure 5: Grouped scatter plots 
 
 ```{r echo=FALSE}
+
+#Filter cluster 1
 group1 <- df_selected_columns %>% filter(hcluster == "1")
 group1 <- summary(group1)
 kable(group1)
@@ -348,11 +383,15 @@ kable(group1)
 
 
 ```{r echo=FALSE}
+
+# Filter cluster 2
 group2 <- df_selected_columns %>% filter(hcluster == "2")
 group2 <- summary(group2)
 kable(group2)
 ```
 ```{r echo=FALSE, message=FALSE, fig.height = 3, fig.width = 9, warning=FALSE, fig.align='center'}
+
+#Create a grid for each table
 group1_grob <- grid.arrange(tableGrob(group1, theme = tt1, rows = NULL), 
                             ncol = 1, nrow = 1, 
                             bottom = "Table 3: Summary table of Group 1")
@@ -361,6 +400,8 @@ group2_grob <- grid.arrange(tableGrob(group2, theme = tt1, rows = NULL),
                             bottom = "Table 4: Summary table of Group 2")
 ```
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 3, fig.width = 9, warning=FALSE, fig.align='center'}
+
+#Plot summary tables of groups 1 and 2
  grid.arrange(arrangeGrob(group1_grob,  ncol=1, nrow=1, name = "title"), 
               arrangeGrob(group2_grob, ncol=1, nrow=1), heights=c(4,1), widths=c(1,1))
 ```
@@ -370,6 +411,7 @@ group2_grob <- grid.arrange(tableGrob(group2, theme = tt1, rows = NULL),
 The map in Figure 6 shows the distribution of neighbourhoods in the two clusters. We can see that the neighbourhoods in Group 1 not only share similar socieconomic traits, they are also geographically close to each other and are located in the peripheral areas of the city.
 
 ```{r echo=FALSE, include=TRUE, message=FALSE, fig.height = 4, fig.width = 7, warning=FALSE}
+
 #Plot all majors without palette
 tmap_mode("plot")
 tm_shape(sf_merged_df) +
