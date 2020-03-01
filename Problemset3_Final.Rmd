@@ -148,7 +148,7 @@ df_cleaned
 # Introduction
 There are 140 neighbourhoods officially recognized by the City of Toronto, and the divisions are used for internal planning purposes. Many shortcomings of economic or social policy planning and making come from the over-reliance on the “one-size-fits-all” approach that overlooks their differences in socioeconomic status. However, customizing policies for 140 neighbourhoods is also improbable. Can we then create groups of neighbourhoods that share similar socioeconomic traits so policy-makers can plan strategically and efficiently? Can we identify the group of neighbourhoods that are vulnerable in their social and economic development, so they receive more attention from the Government? In this study, clustering analysis is conducted to be used to define neighbourhood types and display their characteristics and geographic proximity.
 
-Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods, and white residents are dominating affluent areas in numbers far higher than their share of the population. The segregation pointed out by Hulchanski leads to the choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, the population percentage of residents who have no educational certification, and visible minority population percentage. We intend to articulate the social stratification and spatial stratification in the City of Toronto.
+Troubling differences in poverty, education and diversity exist among neighbourhoods in the City of Toronto. According to David Hulchanski, a professor of the University of Toronto who uses the 2016 census to create demographic charts of Toronto, the city is segregated by race and income. For example, visible minorities are concentrated in low-income neighbourhoods while white residents are dominating affluent areas. The segregation pointed out by Hulchanski leads to the choices of traits we use to conduct the clustering analysis for the neighbourhoods — low-income rate, the population percentage of residents who have no educational certification, and visible minority population percentage. We intend to articulate the social stratification and spatial stratification in the City of Toronto.
 
 # Dataset and Method Description
 
@@ -164,16 +164,12 @@ ggplot(df_cleaned) +
   labs(x = "", y = "No certificate (%)") -> p1
 ggplot(df_cleaned) +
   aes(x = 1:nrow(df_cleaned), y = x18_to_64_years_percent) +
-  #geom_bar(stat="identity", width=1)  
   geom_boxplot() +
   labs(x = "", y = "Low Income (%)") -> p2
 ggplot(df_cleaned) +
   aes(y = total_visible_minority_population) +
   geom_boxplot() +
   labs(x = "", y = "Visible minority (%)") -> p3
-  
-#tt2 <- ttheme_default(core=list(fg_params=list(hjust=.5, x=0.4)),
-#                      rowhead=list(fg_params=list(hjust=.5, x=0.4)))
 grid1 <- grid.arrange(p1, p2, p3, ncol = 1, nrow = 3)
 ```
 
@@ -187,10 +183,8 @@ stats_table <- select(stats_table, stats, no_certificate_diploma_or_degree_2,
                       x18_to_64_years_percent, total_visible_minority_population)
 colnames(stats_table) <- c("stats","No certificate","Low Income","Visible minority")
 grid2 <- grid.arrange(tableGrob(stats_table, theme = tt1, rows = NULL), ncol = 1, nrow = 1)
-#kable(stats_table)
 ```
 ```{r include=TRUE}
-#grid.arrange(grid1, grid2, ncol = 2, nrow = 1, padding = 1, heights=c(2,3))
  grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
          arrangeGrob(grid2, ncol=1, nrow=1), heights=c(28,1), widths=c(1,3), 
          bottom = "Figure 1: Descriptive statistics of the data")
@@ -219,7 +213,7 @@ corrplot(correlationMatrix, method="color", col=col(200),
 ```
 
 ```{r echo= FALSE, include=FALSE}
-# Remame columns
+# Rename columns
 df_cleaned <- rename(df_cleaned, 
     no_certificate = no_certificate_diploma_or_degree_2,
     low_income = x18_to_64_years_percent,
@@ -252,7 +246,7 @@ corrplot(correlationMatrix, method="color", col=col(200),
 ```
 
 ## Limitation of the Dataset and Approach
-In 2016, the long-form Census became mandatory once again and was distributed to one out of every four households (25%). Income data were gathered solely by linking with administrative data (Canada Revenue Agency). Census data is subject to error, such as coverage, non-response, and sampling errors. Moreover, although the Census is mandatory, it is still likely to be affected by Response Bias because people do not always provide accurate or truthful information. Error is especially common in the collection of income data. Correct income data are often more challenging to obtain because the wealthiest households are more prompted to underreport their incomes. Therefore, income inequality based on data from household surveys are likely to be underestimated.
+In 2016, the mandatory Census survey was distributed to one out of every four households. Census data is subject to error, such as coverage, non-response, and sampling errors. Moreover, although the Census is mandatory, it is still likely to be affected by Response Bias because people do not always provide accurate or truthful information. Error is especially common in the collection of income data. Correct income data are often more challenging to obtain because the wealthiest households are more prompted to underreport their incomes. Therefore, income inequality based on data from household surveys are likely to be underestimated.
 
 Another limitation lies in the lack of time-series data to be compared with the data sourced from 2016. This prevents a holistic observation in the change of socioeconomic dynamics in the neighbourhoods across time. The neighbourhoods may not be assigned to the same clusters based on data sourced from past years. Such shifts would provide insights that are not available in this study.
 
@@ -337,10 +331,10 @@ colors <- c("#00AFBB", "#E7B800", "#FC4E07", "#000000")
 colors <- colors[merged_df$hcluster]
 plot(df_selected_columns, col = colors)
 par(xpd = T, mar = par()$mar + c(0,0,0,7))
-legend(.36, .08, horiz = TRUE,
+legend(.35, .1, horiz = TRUE,
        legend = c("Group 1", "Group 2"), 
        col =unique(colors), 
-       pch = 19, bty = "o", 
+       pch = 1, bty = "n", 
        cex = .8)
 ```
 
