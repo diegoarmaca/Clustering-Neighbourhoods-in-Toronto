@@ -434,6 +434,10 @@ Figure 6: Map of clustered neighbourhood
 \pagebreak
 # References
 
+Jiawei Han, Micheline Kamber, and Jian Pei. 2011. "DataMining: Concepts and Techniques." Elsevier Inc. 
+
+James Gareth, Daniela Witten, Trevor Hastie, and Robert Tibshirani. 2014. “An Introduction to Statistical Learning: With Applications in R.” Springer Publishing Company, Incorporated.
+
 DBSCAN: Density-Based Clustering Essentials. (n.d.). Retrieved February 27, 2020, from https://www.datanovia.com/en/lessons/dbscan-density-based-clustering-essentials/
 
 Department of Justice, & Research and Statistics Division. (2015, January 7). A One-Day Snapshot of Aboriginal Youth in Custody Across Canada. Retrieved February 27, 2020, from https://www.justice.gc.ca/eng/rp-pr/cj-jp/yj-jj/yj1-jj1/p1_6.html
